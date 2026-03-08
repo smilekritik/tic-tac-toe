@@ -1,0 +1,269 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  admin
+  superadmin
+}
+
+enum MatchStatus {
+  waiting
+  active
+  finished
+}
+
+enum MatchType {
+  ranked
+  casual
+  private
+}
+
+enum ResultType {
+  win
+  draw
+  timeout
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String    @map("password_hash")
+  emailVerified Boolean   @default(false) @map("email_verified")
+  role          Role      @default(user)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  profile              UserProfile?
+  refreshTokens        RefreshToken[]
+  emailVerifyTokens    EmailVerificationToken[]
+  passwordResetTokens  PasswordResetToken[]
+  emailChanges         UserEmailChange[]
+  loginHistory         UserLoginHistory[]
+  bans                 UserBan[]           @relation("BannedUser")
+  bannedBy             UserBan[]           @relation("BannedByAdmin")
+  ratings              UserRating[]
+  invites              Invite[]
+  matchesAsX           Match[]             @relation("PlayerX")
+  matchesAsO           Match[]             @relation("PlayerO")
+  wonMatches           Match[]             @relation("Winner")
+  moves                MatchMove[]
+  adminLogsAsAdmin     AdminLog[]          @relation("AdminActor")
+  adminLogsAsTarget    AdminLog[]          @relation("AdminTarget")
+
+  @@map("users")
+}
+
+model UserProfile {
+  id                   String   @id @default(uuid())
+  userId               String   @unique @map("user_id")
+  avatarPath           String?  @map("avatar_path")
+  preferredLanguage    String   @default("en") @map("preferred_language")
+  chatEnabledDefault   Boolean  @default(true) @map("chat_enabled_default")
+  publicProfileEnabled Boolean  @default(true) @map("public_profile_enabled")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model UserEmailChange {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  newEmail    String    @map("new_email")
+  token       String    @unique
+  expiresAt   DateTime  @map("expires_at")
+  confirmedAt DateTime? @map("confirmed_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_email_changes")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  revokedAt DateTime? @map("revoked_at")
+  ipAddress String?   @map("ip_address")
+  userAgent String?   @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model UserLoginHistory {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  success   Boolean
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_login_history")
+}
+
+model UserBan {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  reason    String
+  bannedBy  String   @map("banned_by")
+  startsAt  DateTime @default(now()) @map("starts_at")
+  endsAt    DateTime @map("ends_at")
+  active    Boolean  @default(true)
+
+  user  User @relation("BannedUser", fields: [userId], references: [id], onDelete: Cascade)
+  admin User @relation("BannedByAdmin", fields: [bannedBy], references: [id])
+
+  @@map("user_bans")
+}
+
+model GameMode {
+  id        String  @id @default(uuid())
+  code      String  @unique
+  name      String
+  isRanked  Boolean @default(true) @map("is_ranked")
+  isEnabled Boolean @default(true) @map("is_enabled")
+
+  ratings UserRating[]
+  invites Invite[]
+  matches Match[]
+
+  @@map("game_modes")
+}
+
+model UserRating {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  gameModeId   String   @map("game_mode_id")
+  eloRating    Int      @default(1000) @map("elo_rating")
+  gamesPlayed  Int      @default(0) @map("games_played")
+  wins         Int      @default(0)
+  losses       Int      @default(0)
+  draws        Int      @default(0)
+  winStreak    Int      @default(0) @map("win_streak")
+  maxWinStreak Int      @default(0) @map("max_win_streak")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameMode GameMode @relation(fields: [gameModeId], references: [id])
+
+  @@unique([userId, gameModeId])
+  @@map("user_ratings")
+}
+
+model Invite {
+  id          String    @id @default(uuid())
+  createdBy   String    @map("created_by")
+  token       String    @unique
+  gameModeId  String    @map("game_mode_id")
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  creator  User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  gameMode GameMode @relation(fields: [gameModeId], references: [id])
+
+  @@map("invites")
+}
+
+model Match {
+  id              String      @id @default(uuid())
+  gameModeId      String      @map("game_mode_id")
+  matchType       MatchType   @map("match_type")
+  playerXId       String      @map("player_x_id")
+  playerOId       String      @map("player_o_id")
+  winnerId        String?     @map("winner_id")
+  status          MatchStatus @default(waiting)
+  resultType      ResultType? @map("result_type")
+  startedAt       DateTime?   @map("started_at")
+  finishedAt      DateTime?   @map("finished_at")
+  durationSeconds Int?        @map("duration_seconds")
+  ratingDeltaX    Int?        @map("rating_delta_x")
+  ratingDeltaO    Int?        @map("rating_delta_o")
+
+  gameMode GameMode    @relation(fields: [gameModeId], references: [id])
+  playerX  User        @relation("PlayerX", fields: [playerXId], references: [id])
+  playerO  User        @relation("PlayerO", fields: [playerOId], references: [id])
+  winner   User?       @relation("Winner", fields: [winnerId], references: [id])
+  moves    MatchMove[]
+
+  @@map("matches")
+}
+
+model MatchMove {
+  id         String   @id @default(uuid())
+  matchId    String   @map("match_id")
+  moveNumber Int      @map("move_number")
+  playerId   String   @map("player_id")
+  symbol     String
+  positionX  Int      @map("position_x")
+  positionY  Int      @map("position_y")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player User  @relation(fields: [playerId], references: [id])
+
+  @@map("match_moves")
+}
+
+model AdminLog {
+  id            String   @id @default(uuid())
+  adminUserId   String   @map("admin_user_id")
+  targetUserId  String?  @map("target_user_id")
+  actionType    String   @map("action_type")
+  reason        String?
+  payload       Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  admin  User  @relation("AdminActor", fields: [adminUserId], references: [id])
+  target User? @relation("AdminTarget", fields: [targetUserId], references: [id])
+
+  @@map("admin_logs")
+}
