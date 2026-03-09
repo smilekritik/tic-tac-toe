@@ -13,6 +13,8 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -20,19 +22,39 @@ a {
 }
 a:hover {
   color: #535bf2;
+  text-decoration: underline;
 }
 
 body {
   margin: 0;
   display: flex;
   place-items: center;
+  justify-content: center;
   min-width: 320px;
   min-height: 100vh;
+  font-family: system-ui, sans-serif;
+  background: #0f0f0f;
+  color: #f0f0f0;
 }
 
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+p { color: #aaa; margin-bottom: 16px; }
+
+form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+input {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #f0f0f0;
+  font-size: 1rem;
 }
 
 button {
@@ -45,14 +67,31 @@ button {
   background-color: #1a1a1a;
   cursor: pointer;
   transition: border-color 0.25s;
+  padding: 10px;
+  border-radius: 6px;
+  border: none;
+  background: #7c8cf8;
+  color: #fff;
+  font-size: 1rem;
 }
 button:hover {
   border-color: #646cff;
+  background: #6270f0;
 }
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
+
+.page {
+  max-width: 420px;
+  margin: 80px auto;
+  padding: 0 16px;
+}
+
+.error { color: #f87c7c; }
+.success { color: #7cf8a0; }
+.links { display: flex; gap: 16px; }
 
 @media (prefers-color-scheme: light) {
   :root {
