@@ -4,15 +4,20 @@ const prisma = require('../../lib/prisma');
 const tokenService = require('./token.service');
 const env = require('../../config/env');
 
+function createError(code, status) {
+  const err = new Error(code);
+  err.code = code;
+  err.status = status;
+  return err;
+}
+
 async function register({ email, username, password }) {
   const existing = await prisma.user.findFirst({
     where: { OR: [{ email }, { username }] },
   });
   if (existing) {
-    const field = existing.email === email ? 'email' : 'username';
-    const err = new Error(`This ${field} is already taken`);
-    err.status = 409;
-    throw err;
+    const code = existing.email === email ? 'EMAIL_TAKEN' : 'USERNAME_TAKEN';
+    throw createError(code, 409);
   }
 
   const passwordHash = await bcrypt.hash(password, env.security.bcryptRounds);
@@ -51,9 +56,7 @@ async function login({ login, password, ip, userAgent }) {
   }
 
   if (!user || !success) {
-    const err = new Error('Invalid credentials');
-    err.status = 401;
-    throw err;
+    throw createError('INVALID_CREDENTIALS', 401);
   }
 
   const accessToken = tokenService.generateAccessToken(user);
@@ -73,9 +76,7 @@ async function refresh(refreshToken) {
   });
 
   if (!stored || stored.expiresAt < new Date()) {
-    const err = new Error('Invalid refresh token');
-    err.status = 401;
-    throw err;
+    throw createError('TOKEN_INVALID', 401);
   }
 
   const user = await prisma.user.findUnique({ where: { id: stored.userId } });
@@ -98,9 +99,7 @@ async function verifyEmail(token) {
   });
 
   if (!record || record.usedAt || record.expiresAt < new Date()) {
-    const err = new Error('Invalid or expired token');
-    err.status = 400;
-    throw err;
+    throw createError('TOKEN_INVALID', 400);
   }
 
   await prisma.emailVerificationToken.update({
@@ -138,9 +137,7 @@ async function resetPassword(token, newPassword) {
   const record = await prisma.passwordResetToken.findUnique({ where: { token } });
 
   if (!record || record.usedAt || record.expiresAt < new Date()) {
-    const err = new Error('Invalid or expired token');
-    err.status = 400;
-    throw err;
+    throw createError('TOKEN_EXPIRED', 400);
   }
 
   const passwordHash = await bcrypt.hash(newPassword, env.security.bcryptRounds);
