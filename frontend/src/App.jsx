@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useSocket } from './hooks/useSocket';
 import ProtectedRoute from './router/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -10,9 +11,15 @@ import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import PublicProfilePage from './pages/PublicProfilePage';
 
+function SocketInitializer() {
+  useSocket();
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <SocketInitializer />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth/login" element={<LoginPage />} />

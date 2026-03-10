@@ -1,13 +1,15 @@
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LogOut, User, Settings } from 'lucide-react';
+import { LogOut, User, Settings, Wifi, WifiOff } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
+import { useSocketStore } from '../store/socket.store';
 import client from '../api/client';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const clear = useAuthStore((s) => s.clear);
+  const connected = useSocketStore((s) => s.connected);
   const navigate = useNavigate();
   const { t } = useTranslation(['auth', 'common']);
 
@@ -48,6 +50,13 @@ export default function DashboardPage() {
               <LogOut size={16} /> {t('common:nav.logout')}
             </button>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2 mb-4 text-sm">
+          {connected
+            ? <><Wifi size={16} className="text-green-400" /><span className="text-green-400">Connected</span></>
+            : <><WifiOff size={16} className="text-red-400" /><span className="text-red-400">Disconnected</span></>
+          }
         </div>
 
         <div className="bg-[hsl(var(--card))] rounded-xl p-8 border border-[hsl(var(--border))] text-center">
