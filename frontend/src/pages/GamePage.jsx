@@ -6,6 +6,7 @@ import Board from '../components/game/Board';
 import XIcon from '../components/game/XIcon';
 import OIcon from '../components/game/OIcon';
 import { cn } from '../lib/utils';
+import client from '../api/client';
 
 export default function GamePage() {
   const { matchId } = useParams();
@@ -17,20 +18,20 @@ export default function GamePage() {
   const [currentSymbol, setCurrentSymbol] = useState('X');
   const [playerX, setPlayerX] = useState('');
   const [playerO, setPlayerO] = useState('');
+  const [avatarX, setAvatarX] = useState(null);
+  const [avatarO, setAvatarO] = useState(null);
   const [winLine, setWinLine] = useState(null);
   const [gameResult, setGameResult] = useState(null);
   const [timeLeft, setTimeLeft] = useState(30);
   const [error, setError] = useState(null);
   const timerRef = useRef(null);
 
-  // Читаем symbol из sessionStorage — сохранили при matchmaking:matched
   const mySymbol = sessionStorage.getItem(`match:${matchId}:symbol`);
   const opponentSymbol = mySymbol === 'X' ? 'O' : 'X';
-
-  // Имена берём из game:state но показываем username из store пока не пришли
   const myName = mySymbol === 'X' ? (playerX || user?.username) : (playerO || user?.username);
   const opponentName = mySymbol === 'X' ? playerO : playerX;
-
+  const myAvatar = mySymbol === 'X' ? avatarX : avatarO;
+  const opponentAvatar = mySymbol === 'X' ? avatarO : avatarX;
   const isMyTurn = mySymbol === currentSymbol && !gameResult;
 
   useEffect(() => {
@@ -40,17 +41,25 @@ export default function GamePage() {
     socket.on('game:state', (state) => {
       setBoard(state.board);
       setCurrentSymbol(state.currentSymbol);
-      setPlayerX(state.playerX);
-      setPlayerO(state.playerO);
+
+      if (state.playerX && state.playerX !== playerX) {
+        setPlayerX(state.playerX);
+        client.get(`/users/${state.playerX}`).then(({ data }) => {
+          setAvatarX(data.profile?.avatarPath || null);
+        }).catch(() => {});
+      }
+      if (state.playerO && state.playerO !== playerO) {
+        setPlayerO(state.playerO);
+        client.get(`/users/${state.playerO}`).then(({ data }) => {
+          setAvatarO(data.profile?.avatarPath || null);
+        }).catch(() => {});
+      }
+
       if (state.winLine) setWinLine(state.winLine);
       resetTimer();
     });
 
-    socket.on('game:ended', (result) => {
-      setGameResult(result);
-      clearTimer();
-    });
-
+    socket.on('game:ended', (result) => { setGameResult(result); clearTimer(); });
     socket.on('game:error', ({ code }) => setError(code));
 
     return () => {
@@ -100,73 +109,76 @@ export default function GamePage() {
     return '#ef4444';
   };
 
+  const boardSize = 'min(60vh, 80vw)';
+  const avatarSize = 'min(12vh, 96px)';
+
   const PlayerBar = () => (
-    <div className="relative w-[306px] rounded-xl border border-[hsl(var(--border))] overflow-hidden"
-      style={{ background: 'hsl(var(--card))' }}>
-      <div
-        className="absolute top-0 bottom-0 w-1/2 transition-all duration-500 ease-in-out"
-        style={{
+    <div style={{ width: boardSize, display: 'flex', alignItems: 'center', gap: 10 }}>
+      <img
+        src={myAvatar || '/default-avatar.png'}
+        alt="me"
+        style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+        onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }}
+      />
+
+      <div style={{ flex: 1, position: 'relative', background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{
+          position: 'absolute', top: 0, bottom: 0, width: '50%',
           left: isMyTurn || gameResult ? '0%' : '50%',
           background: 'rgba(255,255,255,0.18)',
           borderRight: '2px solid rgba(255,255,255,0.5)',
-        }}
-      />
-      <div className="relative flex items-center">
-        <div className="flex items-center gap-2 px-3 py-3 w-1/2">
-          {mySymbol === 'X' ? <XIcon size={20} /> : <OIcon size={20} />}
-          <span className="font-semibold text-sm truncate">{myName}</span>
-        </div>
-        <span className="text-[hsl(var(--muted-foreground))] text-xs font-medium shrink-0">VS</span>
-        <div className="flex items-center justify-end gap-2 px-3 py-3 w-1/2">
-          <span className="font-semibold text-sm truncate">{opponentName || '...'}</span>
-          {opponentSymbol === 'X' ? <XIcon size={20} /> : <OIcon size={20} />}
+          transition: 'left 0.5s ease',
+        }} />
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 10px', width: '50%', minWidth: 0 }}>
+            {mySymbol === 'X' ? <XIcon size={18} /> : <OIcon size={18} />}
+            <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{myName}</span>
+          </div>
+          <span style={{ fontSize: 10, color: 'hsl(var(--muted-foreground))', flexShrink: 0 }}>VS</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, padding: '8px 10px', width: '50%', minWidth: 0 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opponentName || '...'}</span>
+            {opponentSymbol === 'X' ? <XIcon size={18} /> : <OIcon size={18} />}
+          </div>
         </div>
       </div>
+
+      <img
+        src={opponentAvatar || '/default-avatar.png'}
+        alt="opponent"
+        style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+        onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }}
+      />
     </div>
   );
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 gap-5">
-
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: 'min(20px, 2.5vh)' }}>
       <PlayerBar />
 
-      {/* Timer */}
       {!gameResult && (
-        <div className="flex items-center gap-3 w-[306px]">
-          <span className="text-xl font-bold tabular-nums w-10" style={{ color: getTimerColor() }}>
+        <div style={{ width: boardSize, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 'min(20px, 2.5vh)', fontWeight: 700, width: 48, color: getTimerColor() }}>
             {timeLeft}s
           </span>
-          <div className="flex-1 h-2 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-1000"
-              style={{
-                width: `${(timeLeft / 30) * 100}%`,
-                backgroundColor: getTimerColor(),
-                transition: 'width 1s linear, background-color 1s ease',
-              }}
-            />
+          <div style={{ flex: 1, height: 8, background: 'hsl(var(--muted))', borderRadius: 9999, overflow: 'hidden' }}>
+            <div style={{
+              width: `${(timeLeft / 30) * 100}%`, height: '100%', borderRadius: 9999,
+              backgroundColor: getTimerColor(),
+              transition: 'width 1s linear, background-color 1s ease',
+            }} />
           </div>
         </div>
       )}
 
-      {/* Status */}
-      <div className="h-8 flex items-center justify-center w-[306px]">
+      <div style={{ height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', width: boardSize }}>
         {gameResult ? (
-          <span className={cn('text-2xl font-bold', getResultColor())}>{getResultText()}</span>
+          <span className={cn('font-bold', getResultColor())} style={{ fontSize: 'min(24px, 3vh)' }}>{getResultText()}</span>
         ) : isMyTurn ? (
-          <div
-            className="flex items-center gap-2 px-4 py-1 text-sm font-semibold animate-pulse"
-            style={{
-              background: getTimerColor(),
-              color: '#000000',
-              borderRadius: '4px',
-              transition: 'background-color 1s ease',
-            }}
-          >
+          <div className="animate-pulse" style={{ background: getTimerColor(), color: '#000', borderRadius: 4, padding: '4px 16px', fontSize: 'min(14px, 1.8vh)', fontWeight: 600, transition: 'background-color 1s ease' }}>
             ● Your turn
           </div>
         ) : (
-          <span className="text-[hsl(var(--muted-foreground))] text-sm">Opponent is thinking...</span>
+          <span style={{ color: 'hsl(var(--muted-foreground))', fontSize: 'min(14px, 1.8vh)' }}>Opponent is thinking...</span>
         )}
       </div>
 
@@ -177,15 +189,16 @@ export default function GamePage() {
         mySymbol={mySymbol}
         winLine={winLine}
         gameEnded={!!gameResult}
+        size={boardSize}
       />
 
       {gameResult && (
-        <button onClick={() => navigate('/dashboard')} className="w-[306px]">
+        <button onClick={() => navigate('/dashboard')} style={{ width: boardSize }}>
           Back to lobby
         </button>
       )}
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p style={{ color: '#f87171', fontSize: 14 }}>{error}</p>}
     </div>
   );
 }

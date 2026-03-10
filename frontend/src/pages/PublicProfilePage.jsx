@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, Trophy, ArrowLeft } from 'lucide-react';
+import { User, Trophy } from 'lucide-react';
 import client from '../api/client';
 import { useAuthStore } from '../store/auth.store';
+import Layout from '../components/Layout';
+import Avatar from '../components/Avatar';
 
 export default function PublicProfilePage() {
   const { username } = useParams();
@@ -28,50 +30,40 @@ export default function PublicProfilePage() {
   if (loading) return <div className="loading">{t('common:loading')}</div>;
 
   if (error) return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-      <p className="text-red-400">{error}</p>
-      <Link to="/dashboard" className="text-[hsl(var(--primary))] hover:underline flex items-center gap-1">
-        <ArrowLeft size={16} /> Back
-      </Link>
-    </div>
+    <Layout>
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
+        <p className="text-red-400">{error}</p>
+      </div>
+    </Layout>
   );
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <Link to="/dashboard" className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] flex items-center gap-1 text-sm">
-          <ArrowLeft size={16} /> Back
-        </Link>
-
-        <div className="bg-[hsl(var(--card))] rounded-xl p-6 border border-[hsl(var(--border))] flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-[hsl(var(--muted))] flex items-center justify-center flex-shrink-0">
-            {profile.profile?.avatarPath
-              ? <img src={profile.profile.avatarPath} alt="avatar" className="w-full h-full object-cover" />
-              : <User size={32} className="text-[hsl(var(--muted-foreground))]" />
-            }
-          </div>
+    <Layout>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'min(16px, 2vh)' }}>
+        <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))', display: 'flex', alignItems: 'center', gap: 16 }}>
+          <Avatar src={profile.profile?.avatarPath} size="min(64px, 8vh)" />
           <div>
-            <h1 className="text-2xl font-bold">@{profile.username}</h1>
-            <p className="text-[hsl(var(--muted-foreground))] text-sm">
+            <h1 style={{ fontSize: 'min(20px, 2.5vh)', fontWeight: 700 }}>@{profile.username}</h1>
+            <p style={{ color: 'hsl(var(--muted-foreground))', fontSize: 'min(14px, 1.8vh)', marginTop: 4 }}>
               Member since {new Date(profile.createdAt).toLocaleDateString()}
             </p>
           </div>
         </div>
 
         {profile.ratings?.length > 0 && (
-          <div className="bg-[hsl(var(--card))] rounded-xl p-6 border border-[hsl(var(--border))]">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Trophy size={20} /> Stats
+          <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
+            <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Trophy size={14} /> Stats
             </h2>
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {profile.ratings.map((r) => (
-                <div key={r.gameMode.code} className="flex justify-between items-center p-3 bg-[hsl(var(--muted))] rounded-lg">
-                  <span className="font-medium">{r.gameMode.name}</span>
-                  <div className="flex gap-4 text-sm text-[hsl(var(--muted-foreground))]">
-                    <span>ELO: <strong className="text-[hsl(var(--foreground))]">{r.eloRating}</strong></span>
-                    <span className="text-green-400">W {r.wins}</span>
-                    <span className="text-red-400">L {r.losses}</span>
-                    <span className="text-yellow-400">D {r.draws}</span>
+                <div key={r.gameMode.code} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'min(12px, 1.5vh)', background: 'hsl(var(--muted))', borderRadius: 8 }}>
+                  <span style={{ fontWeight: 500, fontSize: 'min(14px, 1.8vh)' }}>{r.gameMode.name}</span>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 'min(14px, 1.8vh)' }}>
+                    <span>ELO: <strong>{r.eloRating}</strong></span>
+                    <span style={{ color: '#4ade80' }}>W {r.wins}</span>
+                    <span style={{ color: '#f87171' }}>L {r.losses}</span>
+                    <span style={{ color: '#facc15' }}>D {r.draws}</span>
                   </div>
                 </div>
               ))}
@@ -79,6 +71,6 @@ export default function PublicProfilePage() {
           </div>
         )}
       </div>
-    </div>
+    </Layout>
   );
 }

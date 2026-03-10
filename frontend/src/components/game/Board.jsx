@@ -1,20 +1,26 @@
 import Square from './Square';
 
-export default function Board({ squares, onMove, currentSymbol, mySymbol, winLine, gameEnded }) {
+export default function Board({ squares, onMove, currentSymbol, mySymbol, winLine, gameEnded, size = 'min(60vh, 80vw)' }) {
   return (
-    <div
-      className="grid grid-cols-3 gap-[2px] bg-[#333] p-0 rounded-xl overflow-hidden"
-      style={{ width: '306px', height: '306px' }}
-    >
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3, 1fr)',
+      gap: 3,
+      background: '#333',
+      padding: 3,
+      borderRadius: 12,
+      overflow: 'hidden',
+      width: size,
+      height: size,
+    }}>
       {squares.map((value, i) => (
-        <div key={i} style={{ width: '100px', height: '100px' }}>
-          <Square
-            value={value}
-            isClickable={!gameEnded && !value && currentSymbol === mySymbol}
-            isWinning={winLine?.includes(i)}
-            onClick={() => onMove(i)}
-          />
-        </div>
+        <Square
+          key={i}
+          value={value}
+          isClickable={!gameEnded && !value && currentSymbol === mySymbol}
+          isWinning={winLine?.includes(i)}
+          onClick={() => onMove(i)}
+        />
       ))}
     </div>
   );

@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, Mail, AtSign, Globe, Upload, Save, ArrowLeft } from 'lucide-react';
+import { User, Mail, AtSign, Globe, Upload, Save } from 'lucide-react';
 import { useMe } from '../hooks/useMe';
 import { useAuthStore } from '../store/auth.store';
 import client from '../api/client';
 import { cn } from '../lib/utils';
+import Layout from '../components/Layout';
+import Avatar from '../components/Avatar';
 
 export default function ProfilePage() {
   const { me, loading, refetch } = useMe();
@@ -25,7 +26,6 @@ export default function ProfilePage() {
   const msg = (key, text, type = 'success') =>
     setMessages((prev) => ({ ...prev, [key]: { text, type } }));
 
-  // Инициализация после загрузки
   if (me && !username && !email) {
     setUsername(me.username);
     setEmail(me.email);
@@ -57,11 +57,7 @@ export default function ProfilePage() {
 
   const handleProfile = async () => {
     try {
-      await client.patch('/me/profile', {
-        preferredLanguage: lang,
-        chatEnabledDefault: chatEnabled,
-        publicProfileEnabled: publicProfile,
-      });
+      await client.patch('/me/profile', { preferredLanguage: lang, chatEnabledDefault: chatEnabled, publicProfileEnabled: publicProfile });
       i18n.changeLanguage(lang);
       msg('profile', t('profile:saved'));
     } catch {
@@ -75,9 +71,7 @@ export default function ProfilePage() {
     const form = new FormData();
     form.append('avatar', file);
     try {
-      await client.post('/me/avatar', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await client.post('/me/avatar', form, { headers: { 'Content-Type': 'multipart/form-data' } });
       refetch();
       msg('avatar', t('profile:saved'));
     } catch (err) {
@@ -88,146 +82,94 @@ export default function ProfilePage() {
 
   if (loading) return <div className="loading">{t('common:loading')}</div>;
 
-  const avatarUrl = me?.profile?.avatarPath
-    ? `${me.profile.avatarPath}`
-    : null;
+  const LANGS = [
+    { code: 'en', flag: '🇬🇧' },
+    { code: 'uk', flag: '🇺🇦' },
+    { code: 'pl', flag: '🇵🇱' },
+  ];
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--background))] p-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-        <Link to="/dashboard" className="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] flex items-center gap-1 text-sm">
-          <ArrowLeft size={16} /> Back
-        </Link>
-        <h1 className="text-3xl font-bold">{t('profile:title')}</h1>
+    <Layout>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'min(16px, 2vh)' }}>
+        <h1 style={{ fontSize: 'min(24px, 3vh)', fontWeight: 700 }}>{t('profile:title')}</h1>
 
         {/* Avatar */}
-        <div className="bg-[hsl(var(--card))] rounded-xl p-6 border border-[hsl(var(--border))]">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <User size={20} /> {t('profile:avatar')}
-          </h2>
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full overflow-hidden bg-[hsl(var(--muted))] flex items-center justify-center">
-              {avatarUrl
-                ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                : <User size={32} className="text-[hsl(var(--muted-foreground))]" />
-              }
-            </div>
-            <div>
-              <button
-                onClick={() => fileRef.current.click()}
-                className="flex items-center gap-2 px-4 py-2 bg-[hsl(var(--muted))] rounded-lg text-sm hover:bg-[hsl(var(--border))] transition-colors"
-              >
-                <Upload size={16} /> Upload
+        <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
+          <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1 }}>{t('profile:avatar')}</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Avatar src={me?.profile?.avatarPath} size="min(64px, 8vh)" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <button onClick={() => fileRef.current.click()} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 'min(36px, 4.5vh)', padding: '0 16px', background: 'hsl(var(--muted))', borderRadius: 8, fontSize: 'min(14px, 1.8vh)', width: 'fit-content' }}>
+                <Upload size={14} /> Upload
               </button>
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatar} />
-              {messages.avatar && (
-                <p className={cn('text-sm mt-2', messages.avatar.type === 'error' ? 'text-red-400' : 'text-green-400')}>
-                  {messages.avatar.text}
-                </p>
-              )}
+              <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatar} />
+              {messages.avatar && <p style={{ fontSize: 12, color: messages.avatar.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.avatar.text}</p>}
             </div>
           </div>
         </div>
 
         {/* Username */}
-        <div className="bg-[hsl(var(--card))] rounded-xl p-6 border border-[hsl(var(--border))]">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <AtSign size={20} /> {t('profile:username')}
-          </h2>
-          <div className="flex gap-2">
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="flex-1"
-            />
-            <button onClick={handleUsername} className="flex items-center gap-2 px-4 whitespace-nowrap">
-              <Save size={16} /> {t('profile:save')}
+        <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
+          <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1 }}>{t('profile:username')}</h2>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input value={username} onChange={(e) => setUsername(e.target.value)} style={{ flex: 1, height: 'min(40px, 5vh)', fontSize: 'min(14px, 1.8vh)' }} />
+            <button onClick={handleUsername} style={{ height: 'min(40px, 5vh)', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, width: 96, justifyContent: 'center', fontSize: 'min(14px, 1.8vh)' }}>
+              <Save size={14} /> {t('profile:save')}
             </button>
           </div>
-          {messages.username && (
-            <p className={cn('text-sm mt-2', messages.username.type === 'error' ? 'text-red-400' : 'text-green-400')}>
-              {messages.username.text}
-            </p>
-          )}
+          {messages.username && <p style={{ fontSize: 12, marginTop: 8, color: messages.username.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.username.text}</p>}
         </div>
 
         {/* Email */}
-        <div className="bg-[hsl(var(--card))] rounded-xl p-6 border border-[hsl(var(--border))]">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Mail size={20} /> {t('profile:email')}
-          </h2>
-          <div className="flex gap-2">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="flex-1"
-            />
-            <button onClick={handleEmail} className="flex items-center gap-2 px-4 whitespace-nowrap">
-              <Save size={16} /> {t('profile:save')}
+        <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
+          <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1 }}>{t('profile:email')}</h2>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ flex: 1, height: 'min(40px, 5vh)', fontSize: 'min(14px, 1.8vh)' }} />
+            <button onClick={handleEmail} style={{ height: 'min(40px, 5vh)', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, width: 96, justifyContent: 'center', fontSize: 'min(14px, 1.8vh)' }}>
+              <Save size={14} /> {t('profile:save')}
             </button>
           </div>
-          {messages.email && (
-            <p className={cn('text-sm mt-2', messages.email.type === 'error' ? 'text-red-400' : 'text-green-400')}>
-              {messages.email.text}
-            </p>
-          )}
+          {messages.email && <p style={{ fontSize: 12, marginTop: 8, color: messages.email.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.email.text}</p>}
         </div>
 
         {/* Settings */}
-        <div className="bg-[hsl(var(--card))] rounded-xl p-6 border border-[hsl(var(--border))]">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Globe size={20} /> {t('profile:language')}
-          </h2>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              {['en', 'uk', 'pl'].map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLang(l)}
-                  className={cn(
-                    'px-4 py-2 rounded-lg text-sm border transition-colors',
-                    lang === l
-                      ? 'border-[hsl(var(--primary))] text-[hsl(var(--primary))] bg-[hsl(var(--primary))/0.1]'
-                      : 'border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
-                  )}
+        <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
+          <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1 }}>{t('profile:language')}</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'min(16px, 2vh)' }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {LANGS.map((l) => (
+                <button key={l.code} onClick={() => setLang(l.code)}
+                  style={{
+                    height: 'min(40px, 5vh)', padding: '0 16px', borderRadius: 8, fontSize: 'min(13px, 1.7vh)',
+                    border: `1px solid ${lang === l.code ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
+                    background: lang === l.code ? 'hsl(var(--muted))' : 'transparent',
+                    color: lang === l.code ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}
                 >
-                  {t(`common:language.${l}`)}
+                  <span>{l.flag}</span>
+                  <span>{t(`common:language.${l.code}`)}</span>
                 </button>
               ))}
             </div>
 
-            <label className="flex items-center justify-between">
-              <span className="text-sm">Public profile</span>
-              <input
-                type="checkbox"
-                checked={publicProfile}
-                onChange={(e) => setPublicProfile(e.target.checked)}
-                className="w-4 h-4"
-              />
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 'min(40px, 5vh)' }}>
+              <span style={{ fontSize: 'min(14px, 1.8vh)' }}>Public profile</span>
+              <input type="checkbox" checked={publicProfile} onChange={(e) => setPublicProfile(e.target.checked)} style={{ width: 16, height: 16 }} />
             </label>
 
-            <label className="flex items-center justify-between">
-              <span className="text-sm">Chat enabled</span>
-              <input
-                type="checkbox"
-                checked={chatEnabled}
-                onChange={(e) => setChatEnabled(e.target.checked)}
-                className="w-4 h-4"
-              />
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 'min(40px, 5vh)' }}>
+              <span style={{ fontSize: 'min(14px, 1.8vh)' }}>Chat enabled</span>
+              <input type="checkbox" checked={chatEnabled} onChange={(e) => setChatEnabled(e.target.checked)} style={{ width: 16, height: 16 }} />
             </label>
 
-            <button onClick={handleProfile} className="flex items-center gap-2 w-full justify-center">
-              <Save size={16} /> {t('profile:save')}
+            <button onClick={handleProfile} style={{ height: 'min(40px, 5vh)', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 'min(14px, 1.8vh)' }}>
+              <Save size={14} /> {t('profile:save')}
             </button>
-            {messages.profile && (
-              <p className={cn('text-sm text-center', messages.profile.type === 'error' ? 'text-red-400' : 'text-green-400')}>
-                {messages.profile.text}
-              </p>
-            )}
+            {messages.profile && <p style={{ fontSize: 12, textAlign: 'center', color: messages.profile.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.profile.text}</p>}
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }

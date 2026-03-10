@@ -25,18 +25,12 @@ body {
   min-height: 100vh;
 }
 
-.page {
-  max-width: 420px;
-  margin: 80px auto;
-  padding: 0 16px;
-}
-
+.page { max-width: 420px; margin: 80px auto; padding: 0 16px; }
 .error { color: #f87c7c; }
 .success { color: #7cf8a0; }
 .links { display: flex; gap: 16px; margin-top: 12px; }
 .links a { color: hsl(var(--primary)); text-decoration: none; font-size: 0.9rem; }
 .links a:hover { text-decoration: underline; }
-
 form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 
 input {
@@ -48,7 +42,6 @@ input {
   font-size: 1rem;
   width: 100%;
 }
-
 input:focus { outline: none; border-color: hsl(var(--primary)); }
 
 button {
@@ -61,7 +54,6 @@ button {
   cursor: pointer;
   font-weight: 500;
 }
-
 button:hover { opacity: 0.9; }
 
 h1 { font-size: 2rem; margin-bottom: 8px; font-weight: 700; }
