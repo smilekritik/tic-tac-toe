@@ -1,0 +1,16 @@
+{
+  "appName": "Хрестики-Нулики",
+  "loading": "Завантаження...",
+  "nav": {
+    "login": "Увійти",
+    "register": "Реєстрація",
+    "dashboard": "Головна",
+    "logout": "Вийти",
+    "profile": "Профіль"
+  },
+  "language": {
+    "en": "English",
+    "uk": "Українська",
+    "pl": "Polski"
+  }
+}

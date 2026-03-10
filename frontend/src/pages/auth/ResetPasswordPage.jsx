@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import client from '../../api/client';
 
 export default function ResetPasswordPage() {
@@ -7,26 +8,34 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
+  const { t } = useTranslation(['auth', 'errors']);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await client.post('/auth/reset-password', { token: searchParams.get('token'), password });
+      await client.post('/auth/reset-password', {
+        token: searchParams.get('token'),
+        password,
+      });
       navigate('/auth/login');
     } catch {
-      setMessage('Invalid or expired token');
+      setMessage(t('errors:TOKEN_INVALID'));
     }
   };
 
   return (
-    <div>
-      <h1>Reset Password</h1>
+    <div className="page">
+      <h1>{t('auth:reset.title')}</h1>
       <form onSubmit={handleSubmit}>
-        <input type="password" placeholder="New password" value={password}
-          onChange={(e) => setPassword(e.target.value)} />
-        <button type="submit">Reset</button>
+        <input
+          type="password"
+          placeholder={t('auth:reset.placeholder')}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button type="submit">{t('auth:reset.submit')}</button>
       </form>
-      {message && <p>{message}</p>}
+      {message && <p className="error">{message}</p>}
     </div>
   );
 }

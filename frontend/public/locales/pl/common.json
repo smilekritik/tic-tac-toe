@@ -1,0 +1,16 @@
+{
+  "appName": "Kółko i Krzyżyk",
+  "loading": "Ładowanie...",
+  "nav": {
+    "login": "Zaloguj się",
+    "register": "Rejestracja",
+    "dashboard": "Panel",
+    "logout": "Wyloguj się",
+    "profile": "Profil"
+  },
+  "language": {
+    "en": "English",
+    "uk": "Українська",
+    "pl": "Polski"
+  }
+}

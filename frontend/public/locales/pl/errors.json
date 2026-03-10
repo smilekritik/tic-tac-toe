@@ -1,0 +1,11 @@
+{
+  "EMAIL_TAKEN": "Ten email jest już zajęty",
+  "USERNAME_TAKEN": "Ta nazwa jest już zajęta",
+  "INVALID_CREDENTIALS": "Nieprawidłowy email lub hasło",
+  "EMAIL_NOT_VERIFIED": "Najpierw potwierdź email",
+  "TOKEN_EXPIRED": "Link wygasł",
+  "TOKEN_INVALID": "Nieprawidłowy link",
+  "SOMETHING_WRONG": "Coś poszło nie tak",
+  "LOGIN_FAILED": "Błąd logowania",
+  "REGISTRATION_FAILED": "Błąd rejestracji"
+}

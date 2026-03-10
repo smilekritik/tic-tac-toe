@@ -1,0 +1,11 @@
+{
+  "EMAIL_TAKEN": "This email is already taken",
+  "USERNAME_TAKEN": "This username is already taken",
+  "INVALID_CREDENTIALS": "Invalid email or password",
+  "EMAIL_NOT_VERIFIED": "Please verify your email first",
+  "TOKEN_EXPIRED": "Link has expired",
+  "TOKEN_INVALID": "Invalid link",
+  "SOMETHING_WRONG": "Something went wrong",
+  "LOGIN_FAILED": "Login failed",
+  "REGISTRATION_FAILED": "Registration failed"
+}

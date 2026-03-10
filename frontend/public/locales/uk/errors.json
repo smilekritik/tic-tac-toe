@@ -1,0 +1,11 @@
+{
+  "EMAIL_TAKEN": "Цей email вже зайнятий",
+  "USERNAME_TAKEN": "Це імʼя вже зайняте",
+  "INVALID_CREDENTIALS": "Невірний email або пароль",
+  "EMAIL_NOT_VERIFIED": "Спочатку підтвердьте email",
+  "TOKEN_EXPIRED": "Посилання застаріло",
+  "TOKEN_INVALID": "Недійсне посилання",
+  "SOMETHING_WRONG": "Щось пішло не так",
+  "LOGIN_FAILED": "Помилка входу",
+  "REGISTRATION_FAILED": "Помилка реєстрації"
+}

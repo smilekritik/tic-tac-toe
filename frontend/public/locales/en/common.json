@@ -1,0 +1,16 @@
+{
+  "appName": "Tic-Tac-Toe",
+  "loading": "Loading...",
+  "nav": {
+    "login": "Login",
+    "register": "Register",
+    "dashboard": "Dashboard",
+    "logout": "Logout",
+    "profile": "Profile"
+  },
+  "language": {
+    "en": "English",
+    "uk": "Українська",
+    "pl": "Polski"
+  }
+}

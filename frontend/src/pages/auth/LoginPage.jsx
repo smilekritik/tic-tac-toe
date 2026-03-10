@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import client from '../../api/client';
 import { useAuthStore } from '../../store/auth.store';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 export default function LoginPage() {
   const [form, setForm] = useState({ login: '', password: '' });
   const [error, setError] = useState('');
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
+  const { t } = useTranslation(['auth', 'errors']);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,24 +20,33 @@ export default function LoginPage() {
       setAuth(data.accessToken, data.user);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Login failed');
+      const code = err.response?.data?.error?.code;
+      setError(code ? t(`errors:${code}`) : t('errors:LOGIN_FAILED'));
     }
   };
 
   return (
     <div className="page">
-      <h1>Login</h1>
+      <LanguageSwitcher />
+      <h1>{t('auth:login.title')}</h1>
       <form onSubmit={handleSubmit}>
-        <input placeholder="Email or username" value={form.login}
-          onChange={(e) => setForm({ ...form, login: e.target.value })} />
-        <input type="password" placeholder="Password" value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })} />
+        <input
+          placeholder={t('auth:login.placeholder.login')}
+          value={form.login}
+          onChange={(e) => setForm({ ...form, login: e.target.value })}
+        />
+        <input
+          type="password"
+          placeholder={t('auth:login.placeholder.password')}
+          value={form.password}
+          onChange={(e) => setForm({ ...form, password: e.target.value })}
+        />
         {error && <p className="error">{error}</p>}
-        <button type="submit">Login</button>
+        <button type="submit">{t('auth:login.submit')}</button>
       </form>
       <div className="links">
-        <Link to="/auth/register">Register</Link>
-        <Link to="/auth/forgot-password">Forgot password?</Link>
+        <Link to="/auth/register">{t('auth:login.links.register')}</Link>
+        <Link to="/auth/forgot-password">{t('auth:login.links.forgot')}</Link>
       </div>
     </div>
   );
