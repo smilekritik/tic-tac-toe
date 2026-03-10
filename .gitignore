@@ -12,3 +12,11 @@ node_modules/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Generated
+backend/src/generated/
+
+rebuild.ps1
+
+# Uploads
+uploads/

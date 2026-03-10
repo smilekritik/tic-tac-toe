@@ -7,5 +7,9 @@
   "TOKEN_INVALID": "Invalid link",
   "SOMETHING_WRONG": "Something went wrong",
   "LOGIN_FAILED": "Login failed",
-  "REGISTRATION_FAILED": "Registration failed"
+  "REGISTRATION_FAILED": "Registration failed",
+  "USER_NOT_FOUND": "User not found",
+  "PROFILE_PRIVATE": "This profile is private",
+  "NO_FILE": "No file uploaded",
+  "INVALID_FILE_TYPE": "Only JPEG, PNG and WebP images are allowed"
 }
