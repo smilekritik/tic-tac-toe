@@ -10,6 +10,7 @@ import ActivatePage from './pages/auth/ActivatePage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import PublicProfilePage from './pages/PublicProfilePage';
+import GamePage from './pages/GamePage';
 
 function SocketInitializer() {
   useSocket();
@@ -33,6 +34,9 @@ export default function App() {
         } />
         <Route path="/profile" element={
           <ProtectedRoute><ProfilePage /></ProtectedRoute>
+        } />
+        <Route path="/game/:matchId" element={
+          <ProtectedRoute><GamePage /></ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

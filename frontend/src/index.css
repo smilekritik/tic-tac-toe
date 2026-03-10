@@ -25,7 +25,6 @@ body {
   min-height: 100vh;
 }
 
-/* Legacy classes for auth pages */
 .page {
   max-width: 420px;
   margin: 80px auto;

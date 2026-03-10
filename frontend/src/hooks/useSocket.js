@@ -5,20 +5,20 @@ import { useSocketStore } from '../store/socket.store';
 
 export function useSocket() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const { socket, setSocket, setConnected, clear } = useSocketStore();
+  const { setSocket, setConnected, clear } = useSocketStore();
 
   useEffect(() => {
     if (!accessToken) {
-      socket?.disconnect();
       clear();
       return;
     }
 
-    if (socket?.connected) return;
-
     const newSocket = io('/', {
       auth: { token: accessToken },
       transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
     });
 
     newSocket.on('connect', () => {
@@ -41,6 +41,4 @@ export function useSocket() {
       clear();
     };
   }, [accessToken]);
-
-  return useSocketStore((s) => s.socket);
 }
