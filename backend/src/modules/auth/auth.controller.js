@@ -12,8 +12,10 @@ const COOKIE_OPTS = {
 async function register(req, res, next) {
   try {
     const { email, username, password } = req.body;
-    const { user, verifyToken } = await authService.register({ email, username, password });
-    await mailService.sendVerificationEmail(user.email, verifyToken).catch(() => {});
+    const lang = req.headers['accept-language']?.split(',')[0]?.split('-')[0] || 'en';
+    const supported = ['en', 'uk', 'pl'];
+    const safeLang = supported.includes(lang) ? lang : 'en';
+    await authService.register({ email, username, password, lang: safeLang });
     res.status(201).json({ message: 'Registered. Check your email to verify your account.' });
   } catch (err) {
     next(err);
@@ -66,10 +68,7 @@ async function verifyEmail(req, res, next) {
 
 async function forgotPassword(req, res, next) {
   try {
-    const result = await authService.forgotPassword(req.body.email);
-    if (result) {
-      await mailService.sendPasswordResetEmail(result.user.email, result.resetToken).catch(() => {});
-    }
+    await authService.forgotPassword(req.body.email);
     res.json({ message: 'If that email exists, a reset link was sent.' });
   } catch (err) {
     next(err);

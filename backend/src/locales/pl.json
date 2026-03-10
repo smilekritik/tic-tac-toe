@@ -1,0 +1,16 @@
+{
+  "mail": {
+    "verify": {
+      "subject": "Potwierdź email",
+      "body": "Kliknij, aby potwierdzić konto:"
+    },
+    "reset": {
+      "subject": "Resetuj hasło",
+      "body": "Kliknij, aby zresetować hasło:"
+    },
+    "emailChange": {
+      "subject": "Potwierdź nowy email",
+      "body": "Kliknij, aby potwierdzić nowy email:"
+    }
+  }
+}

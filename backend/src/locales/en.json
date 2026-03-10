@@ -1,0 +1,16 @@
+{
+  "mail": {
+    "verify": {
+      "subject": "Verify your email",
+      "body": "Click to verify your account:"
+    },
+    "reset": {
+      "subject": "Reset your password",
+      "body": "Click to reset your password:"
+    },
+    "emailChange": {
+      "subject": "Confirm your new email",
+      "body": "Click to confirm your new email:"
+    }
+  }
+}

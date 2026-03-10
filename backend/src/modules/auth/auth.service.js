@@ -11,7 +11,7 @@ function createError(code, status) {
   return err;
 }
 
-async function register({ email, username, password }) {
+async function register({ email, username, password, lang = 'en' }) {
   const existing = await prisma.user.findFirst({
     where: { OR: [{ email }, { username }] },
   });
@@ -39,6 +39,7 @@ async function register({ email, username, password }) {
     },
   });
 
+  await mailService.sendVerificationEmail(user.email, verifyToken.token, lang).catch(() => {});
   return { user, verifyToken: verifyToken.token };
 }
 
@@ -114,7 +115,10 @@ async function verifyEmail(token) {
 }
 
 async function forgotPassword(email) {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { profile: true },
+  });
   if (!user) return;
 
   await prisma.passwordResetToken.updateMany({
@@ -130,6 +134,8 @@ async function forgotPassword(email) {
     },
   });
 
+  const lang = user.profile?.preferredLanguage || 'en';
+  await mailService.sendPasswordResetEmail(user.email, record.token, lang).catch(() => {});
   return { user, resetToken: record.token };
 }
 
