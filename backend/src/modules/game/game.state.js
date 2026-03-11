@@ -1,4 +1,5 @@
 const matches = new Map();
+const userActiveMatch = new Map(); // userId -> matchId
 
 function createMatch(matchId, playerX, playerO) {
   matches.set(matchId, {
@@ -8,7 +9,10 @@ function createMatch(matchId, playerX, playerO) {
     gameState: null,
     timer: null,
     connectedPlayers: new Set(),
+    disconnectedPlayers: new Set(),
   });
+  userActiveMatch.set(playerX.userId, matchId);
+  userActiveMatch.set(playerO.userId, matchId);
 }
 
 function getMatch(matchId) {
@@ -22,6 +26,11 @@ function updateMatch(matchId, updates) {
 }
 
 function deleteMatch(matchId) {
+  const match = matches.get(matchId);
+  if (match) {
+    userActiveMatch.delete(match.playerX.userId);
+    userActiveMatch.delete(match.playerO.userId);
+  }
   matches.delete(matchId);
 }
 
@@ -34,4 +43,10 @@ function getMatchByUserId(userId) {
   return null;
 }
 
-module.exports = { createMatch, getMatch, updateMatch, deleteMatch, getMatchByUserId };
+function getActiveMatchForUser(userId) {
+  const matchId = userActiveMatch.get(userId);
+  if (!matchId) return null;
+  return { matchId, match: matches.get(matchId) };
+}
+
+module.exports = { createMatch, getMatch, updateMatch, deleteMatch, getMatchByUserId, getActiveMatchForUser };

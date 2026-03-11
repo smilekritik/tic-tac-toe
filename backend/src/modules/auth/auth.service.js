@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const prisma = require('../../lib/prisma');
 const tokenService = require('./token.service');
+const mailService = require('../../lib/mail.service');
 const env = require('../../config/env');
 
 function createError(code, status) {
@@ -99,7 +100,22 @@ async function verifyEmail(token) {
     where: { token },
   });
 
-  if (!record || record.usedAt || record.expiresAt < new Date()) {
+  if (!record) {
+    throw createError('TOKEN_INVALID', 400);
+  }
+
+  if (record.expiresAt < new Date()) {
+    throw createError('TOKEN_INVALID', 400);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: record.userId },
+  });
+
+  if (record.usedAt) {
+    if (user?.emailVerified) {
+      return { message: 'Email already verified' };
+    }
     throw createError('TOKEN_INVALID', 400);
   }
 
@@ -112,6 +128,8 @@ async function verifyEmail(token) {
     where: { id: record.userId },
     data: { emailVerified: true },
   });
+
+  return { message: 'Email verified' };
 }
 
 async function forgotPassword(email) {
@@ -159,4 +177,37 @@ async function resetPassword(token, newPassword) {
   });
 }
 
-module.exports = { register, login, refresh, logout, verifyEmail, forgotPassword, resetPassword };
+async function resendVerification(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { profile: true },
+  });
+
+  if (!user) {
+    throw createError('USER_NOT_FOUND', 404);
+  }
+
+  if (user.emailVerified) {
+    throw createError('EMAIL_ALREADY_VERIFIED', 400);
+  }
+
+  await prisma.emailVerificationToken.updateMany({
+    where: { userId: user.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+
+  const verifyToken = await prisma.emailVerificationToken.create({
+    data: {
+      userId: user.id,
+      token: crypto.randomBytes(32).toString('hex'),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
+
+  const lang = user.profile?.preferredLanguage || 'en';
+  await mailService.sendVerificationEmail(user.email, verifyToken.token, lang).catch(() => {});
+
+  return { message: 'Verification email sent' };
+}
+
+module.exports = { register, login, refresh, logout, verifyEmail, forgotPassword, resetPassword, resendVerification };

@@ -29,10 +29,29 @@ function startTimer(io, matchId) {
   gameStateService.updateMatch(matchId, { timer });
 }
 
+function startReconnectTimer(io, matchId, disconnectedUserId) {
+  const match = gameStateService.getMatch(matchId);
+  if (!match) return;
+
+  const timerKey = `reconnectTimer_${disconnectedUserId}`;
+  if (match[timerKey]) clearTimeout(match[timerKey]);
+
+  const reconnectTimer = setTimeout(async () => {
+    const current = gameStateService.getMatch(matchId);
+    if (!current) return;
+    // Player didn't reconnect in time — forfeit
+    const winner = current.playerX.userId === disconnectedUserId ? current.playerO : current.playerX;
+    await endMatch(io, matchId, winner.userId, 'abandon');
+  }, RECONNECT_TIMEOUT_MS);
+
+  gameStateService.updateMatch(matchId, { [timerKey]: reconnectTimer });
+}
+
 async function endMatch(io, matchId, winnerId, reason) {
   const match = gameStateService.getMatch(matchId);
   if (!match) return;
   if (match.timer) clearTimeout(match.timer);
+
   await prisma.match.update({
     where: { id: matchId },
     data: {
@@ -42,11 +61,13 @@ async function endMatch(io, matchId, winnerId, reason) {
       finishedAt: new Date(),
     },
   });
+
   io.to(`match:${matchId}`).emit('game:ended', {
     winnerId,
     reason,
-    board: match.gameState.board,
+    board: match.gameState?.board,
   });
+
   gameStateService.deleteMatch(matchId);
 }
 
@@ -61,6 +82,7 @@ async function saveMoveToDb(matchId, playerId, symbol, position, moveNumber) {
 function registerGameHandlers(socket, io) {
   const { id: userId } = socket.user;
 
+  // Handle reconnection to active match
   socket.on('game:join', async ({ matchId }) => {
     const match = gameStateService.getMatch(matchId);
     if (!match) return socket.emit('game:error', { code: 'MATCH_NOT_FOUND' });
@@ -72,11 +94,29 @@ function registerGameHandlers(socket, io) {
 
     const connected = new Set(match.connectedPlayers);
     connected.add(userId);
-    gameStateService.updateMatch(matchId, { connectedPlayers: connected });
+    const disconnected = new Set(match.disconnectedPlayers);
+    disconnected.delete(userId);
+
+    // Clear reconnect timer if exists
+    const timerKey = `reconnectTimer_${userId}`;
+    if (match[timerKey]) {
+      clearTimeout(match[timerKey]);
+    }
+
+    gameStateService.updateMatch(matchId, {
+      connectedPlayers: connected,
+      disconnectedPlayers: disconnected,
+      [timerKey]: null,
+    });
+
+    const wasDisconnected = match.disconnectedPlayers?.has(userId);
 
     if (!gameStateService.getMatch(matchId).gameState) {
       gameStateService.updateMatch(matchId, { gameState: engine.init() });
       startTimer(io, matchId);
+    } else if (wasDisconnected) {
+      // Notify opponent about reconnection
+      socket.to(`match:${matchId}`).emit('game:opponent-reconnected', { userId });
     }
 
     emitMatchState(io, matchId, gameStateService.getMatch(matchId));
@@ -123,6 +163,31 @@ function registerGameHandlers(socket, io) {
 
     emitMatchState(io, matchId, gameStateService.getMatch(matchId));
     startTimer(io, matchId);
+  });
+
+  // Handle disconnect
+  socket.on('disconnect', () => {
+    const active = gameStateService.getActiveMatchForUser(userId);
+    if (!active) return;
+
+    const { matchId, match } = active;
+    if (!match) return;
+
+    const connected = new Set(match.connectedPlayers);
+    connected.delete(userId);
+    const disconnected = new Set(match.disconnectedPlayers);
+    disconnected.add(userId);
+
+    gameStateService.updateMatch(matchId, {
+      connectedPlayers: connected,
+      disconnectedPlayers: disconnected,
+    });
+
+    // Notify opponent
+    io.to(`match:${matchId}`).emit('game:opponent-disconnected', { userId });
+
+    // Start reconnect countdown
+    startReconnectTimer(io, matchId, userId);
   });
 }
 

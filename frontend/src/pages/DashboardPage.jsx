@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, X } from 'lucide-react';
+import { Search, X, Wifi } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
 import { useSocketStore } from '../store/socket.store';
 import Layout from '../components/Layout';
-import { cn } from '../lib/utils';
+import client from '../api/client';
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
@@ -14,6 +14,16 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useTranslation(['auth', 'common']);
   const [inQueue, setInQueue] = useState(false);
+  const [activeMatchId, setActiveMatchId] = useState(null);
+  const [matchmakingDisabled, setMatchmakingDisabled] = useState(false);
+  const [matchmakingError, setMatchmakingError] = useState(null);
+
+  // Check for active match on mount
+  useEffect(() => {
+    client.get('/game/active').then(({ data }) => {
+      if (data.matchId) setActiveMatchId(data.matchId);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!socket) return;
@@ -24,16 +34,30 @@ export default function DashboardPage() {
       sessionStorage.setItem(`match:${matchId}:symbol`, symbol);
       navigate(`/game/${matchId}`);
     });
+    socket.on('matchmaking:error', ({ code }) => {
+      if (code === 'EMAIL_NOT_VERIFIED') {
+        setMatchmakingDisabled(true);
+        setInQueue(false);
+        setMatchmakingError('Please verify your email before searching for a game.');
+      } else {
+        setMatchmakingError(code || 'Matchmaking error');
+      }
+    });
     return () => {
       socket.off('matchmaking:queued');
       socket.off('matchmaking:left');
       socket.off('matchmaking:matched');
+      socket.off('matchmaking:error');
     };
   }, [socket]);
 
   const handleFindGame = () => {
     if (!socket) return;
     socket.emit(inQueue ? 'matchmaking:leave' : 'matchmaking:join');
+  };
+
+  const handleReconnect = () => {
+    navigate(`/game/${activeMatchId}`);
   };
 
   return (
@@ -57,26 +81,53 @@ export default function DashboardPage() {
         }}>
           <h2 style={{ fontSize: 'min(20px, 2.5vh)', fontWeight: 600 }}>Classic 3×3</h2>
 
-          <button
-            onClick={handleFindGame}
-            disabled={!connected}
-            style={{
-              width: '100%',
-              height: 'min(48px, 6vh)',
-              borderRadius: 12,
-              fontWeight: 500,
-              fontSize: 'min(16px, 2vh)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              background: inQueue ? 'rgba(239,68,68,0.2)' : 'hsl(var(--primary))',
-              color: inQueue ? '#f87171' : 'white',
-              border: inQueue ? '1px solid #ef4444' : 'none',
-              opacity: !connected ? 0.5 : 1,
-              cursor: !connected ? 'not-allowed' : 'pointer',
-              transition: 'opacity 0.2s',
-            }}
-          >
-            {inQueue ? <><X size={18} /> Cancel</> : <><Search size={18} /> Find Game</>}
-          </button>
+          {activeMatchId ? (
+            <button
+              onClick={handleReconnect}
+              style={{
+                width: '100%',
+                height: 'min(48px, 6vh)',
+                borderRadius: 12,
+                fontWeight: 500,
+                fontSize: 'min(16px, 2vh)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                background: 'rgba(239,68,68,0.15)',
+                color: '#f87171',
+                border: '1px solid #ef4444',
+                cursor: 'pointer',
+                animation: 'pulse 2s infinite',
+              }}
+            >
+              <Wifi size={18} /> Reconnect to active game
+            </button>
+          ) : (
+            <button
+              onClick={handleFindGame}
+              disabled={!connected || matchmakingDisabled}
+              style={{
+                width: '100%',
+                height: 'min(48px, 6vh)',
+                borderRadius: 12,
+                fontWeight: 500,
+                fontSize: 'min(16px, 2vh)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                background: inQueue ? 'rgba(239,68,68,0.2)' : 'hsl(var(--primary))',
+                color: inQueue ? '#f87171' : 'white',
+                border: inQueue ? '1px solid #ef4444' : 'none',
+                opacity: (!connected || matchmakingDisabled) ? 0.5 : 1,
+                cursor: (!connected || matchmakingDisabled) ? 'not-allowed' : 'pointer',
+                transition: 'opacity 0.2s',
+              }}
+            >
+              {inQueue ? <><X size={18} /> Cancel</> : <><Search size={18} /> Find Game</>}
+            </button>
+          )}
+
+          {matchmakingError && (
+            <p style={{ marginTop: 8, color: '#f87171', fontSize: 'min(14px, 1.8vh)', textAlign: 'center' }}>
+              {matchmakingError}
+            </p>
+          )}
 
           {inQueue && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'hsl(var(--muted-foreground))', fontSize: 'min(14px, 1.8vh)' }}>

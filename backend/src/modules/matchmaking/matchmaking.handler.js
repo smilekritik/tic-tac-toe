@@ -1,11 +1,21 @@
 const matchmakingService = require('./matchmaking.service');
 const gameStateService = require('../game/game.state');
+const meService = require('../me/me.service');
 
 function registerMatchmakingHandlers(socket, io) {
   const { id: userId, username } = socket.user;
 
   socket.on('matchmaking:join', async () => {
     if (matchmakingService.isInQueue(userId)) return;
+
+    try {
+      const me = await meService.getMe(userId);
+      if (!me.emailVerified) {
+        return socket.emit('matchmaking:error', { code: 'EMAIL_NOT_VERIFIED' });
+      }
+    } catch (e) {
+      return socket.emit('matchmaking:error', { code: 'USER_NOT_ELIGIBLE' });
+    }
 
     matchmakingService.addToQueue(userId, username, socket.id);
     socket.emit('matchmaking:queued');

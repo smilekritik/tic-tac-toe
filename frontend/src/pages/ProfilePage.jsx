@@ -47,8 +47,13 @@ export default function ProfilePage() {
 
   const handleEmail = async () => {
     try {
-      await client.patch('/me/email', { email });
-      msg('email', 'Confirmation email sent');
+      if (me?.emailVerified) {
+        await client.patch('/me/email', { email });
+        msg('email', 'Confirmation email sent');
+      } else {
+        await client.post('/auth/resend-verification');
+        msg('email', 'Verification email sent');
+      }
     } catch (err) {
       const code = err.response?.data?.error?.code;
       msg('email', t(`errors:${code || 'SOMETHING_WRONG'}`), 'error');
@@ -124,12 +129,28 @@ export default function ProfilePage() {
         <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
           <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1 }}>{t('profile:email')}</h2>
           <div style={{ display: 'flex', gap: 8 }}>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ flex: 1, height: 'min(40px, 5vh)', fontSize: 'min(14px, 1.8vh)' }} />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              style={{
+                flex: 1,
+                height: 'min(40px, 5vh)',
+                fontSize: 'min(14px, 1.8vh)',
+                border: `1px solid ${me?.emailVerified ? 'hsl(var(--border))' : '#ef4444'}`,
+                background: me?.emailVerified ? 'transparent' : 'rgba(248,113,113,0.08)',
+              }}
+            />
             <button onClick={handleEmail} style={{ height: 'min(40px, 5vh)', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, width: 96, justifyContent: 'center', fontSize: 'min(14px, 1.8vh)' }}>
-              <Save size={14} /> {t('profile:save')}
+              <Save size={14} /> {me?.emailVerified ? t('profile:save') : 'Resend'}
             </button>
           </div>
-          {messages.email && <p style={{ fontSize: 12, marginTop: 8, color: messages.email.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.email.text}</p>}
+          {!me?.emailVerified && (
+            <p style={{ fontSize: 12, marginTop: 4, color: '#f87171' }}>
+              Email not verified
+            </p>
+          )}
+          {messages.email && <p style={{ fontSize: 12, marginTop: 4, color: messages.email.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.email.text}</p>}
         </div>
 
         {/* Settings */}

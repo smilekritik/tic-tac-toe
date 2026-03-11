@@ -84,4 +84,14 @@ async function resetPassword(req, res, next) {
   }
 }
 
-module.exports = { register, login, refresh, logout, verifyEmail, forgotPassword, resetPassword };
+async function resendVerification(req, res, next) {
+  try {
+    const userId = req.user.sub || req.user.id;
+    await authService.resendVerification(userId);
+    res.json({ message: 'Verification email sent' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { register, login, refresh, logout, verifyEmail, forgotPassword, resetPassword, resendVerification };

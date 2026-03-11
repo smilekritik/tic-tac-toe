@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/auth.store';
 import Board from '../components/game/Board';
 import XIcon from '../components/game/XIcon';
 import OIcon from '../components/game/OIcon';
+import Avatar from '../components/Avatar';
 import { cn } from '../lib/utils';
 import client from '../api/client';
 
@@ -109,17 +110,12 @@ export default function GamePage() {
     return '#ef4444';
   };
 
-  const boardSize = 'min(60vh, 80vw)';
-  const avatarSize = 'min(12vh, 96px)';
+  const avatarSize = 40;
+  const boardSize = 'min(306px, 80vw)';
 
   const PlayerBar = () => (
-    <div style={{ width: boardSize, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <img
-        src={myAvatar || '/default-avatar.png'}
-        alt="me"
-        style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-        onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }}
-      />
+    <div style={{ width: boardSize, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <Avatar src={myAvatar} size={avatarSize} />
 
       <div style={{ flex: 1, position: 'relative', background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 12, overflow: 'hidden' }}>
         <div style={{
@@ -130,34 +126,29 @@ export default function GamePage() {
           transition: 'left 0.5s ease',
         }} />
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 10px', width: '50%', minWidth: 0 }}>
-            {mySymbol === 'X' ? <XIcon size={18} /> : <OIcon size={18} />}
-            <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{myName}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 8px', width: '50%', minWidth: 0 }}>
+            {mySymbol === 'X' ? <XIcon size={16} /> : <OIcon size={16} />}
+            <span style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{myName}</span>
           </div>
           <span style={{ fontSize: 10, color: 'hsl(var(--muted-foreground))', flexShrink: 0 }}>VS</span>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, padding: '8px 10px', width: '50%', minWidth: 0 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opponentName || '...'}</span>
-            {opponentSymbol === 'X' ? <XIcon size={18} /> : <OIcon size={18} />}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4, padding: '6px 8px', width: '50%', minWidth: 0 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opponentName || '...'}</span>
+            {opponentSymbol === 'X' ? <XIcon size={16} /> : <OIcon size={16} />}
           </div>
         </div>
       </div>
 
-      <img
-        src={opponentAvatar || '/default-avatar.png'}
-        alt="opponent"
-        style={{ width: avatarSize, height: avatarSize, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-        onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }}
-      />
+      <Avatar src={opponentAvatar} size={avatarSize} />
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: 'min(20px, 2.5vh)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: 20 }}>
       <PlayerBar />
 
       {!gameResult && (
         <div style={{ width: boardSize, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 'min(20px, 2.5vh)', fontWeight: 700, width: 48, color: getTimerColor() }}>
+          <span style={{ fontSize: 20, fontWeight: 700, width: 48, color: getTimerColor() }}>
             {timeLeft}s
           </span>
           <div style={{ flex: 1, height: 8, background: 'hsl(var(--muted))', borderRadius: 9999, overflow: 'hidden' }}>
@@ -172,13 +163,13 @@ export default function GamePage() {
 
       <div style={{ height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', width: boardSize }}>
         {gameResult ? (
-          <span className={cn('font-bold', getResultColor())} style={{ fontSize: 'min(24px, 3vh)' }}>{getResultText()}</span>
+          <span className={cn('text-2xl font-bold', getResultColor())}>{getResultText()}</span>
         ) : isMyTurn ? (
-          <div className="animate-pulse" style={{ background: getTimerColor(), color: '#000', borderRadius: 4, padding: '4px 16px', fontSize: 'min(14px, 1.8vh)', fontWeight: 600, transition: 'background-color 1s ease' }}>
+          <div className="animate-pulse" style={{ background: getTimerColor(), color: '#000', borderRadius: 4, padding: '4px 16px', fontSize: 14, fontWeight: 600, transition: 'background-color 1s ease' }}>
             ● Your turn
           </div>
         ) : (
-          <span style={{ color: 'hsl(var(--muted-foreground))', fontSize: 'min(14px, 1.8vh)' }}>Opponent is thinking...</span>
+          <span style={{ color: 'hsl(var(--muted-foreground))', fontSize: 14 }}>Opponent is thinking...</span>
         )}
       </div>
 

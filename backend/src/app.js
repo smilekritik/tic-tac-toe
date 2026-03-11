@@ -9,6 +9,7 @@ const env = require('./config/env');
 const authRoutes = require('./modules/auth/auth.routes');
 const meRoutes = require('./modules/me/me.routes');
 const usersRoutes = require('./modules/users/users.routes');
+const gameRoutes = require('./modules/game/game.routes');
 
 const app = express();
 
@@ -22,6 +23,8 @@ app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/me', meRoutes);
 app.use('/api/users', usersRoutes);
+
+app.use('/api/game', gameRoutes);
 
 app.use(errorHandler);
 
