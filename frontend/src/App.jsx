@@ -11,6 +11,7 @@ import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import PublicProfilePage from './pages/PublicProfilePage';
 import GamePage from './pages/GamePage';
+import Footer from './components/Footer';
 
 function SocketInitializer() {
   useSocket();
@@ -21,25 +22,51 @@ export default function App() {
   return (
     <BrowserRouter>
       <SocketInitializer />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/auth/login" element={<LoginPage />} />
-        <Route path="/auth/register" element={<RegisterPage />} />
-        <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/auth/activate/:token" element={<ActivatePage />} />
-        <Route path="/u/:username" element={<PublicProfilePage />} />
-        <Route path="/dashboard" element={
-          <ProtectedRoute><DashboardPage /></ProtectedRoute>
-        } />
-        <Route path="/profile" element={
-          <ProtectedRoute><ProfilePage /></ProtectedRoute>
-        } />
-        <Route path="/game/:matchId" element={
-          <ProtectedRoute><GamePage /></ProtectedRoute>
-        } />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <div className="app-shell">
+        <main className="app-main">
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/auth/login" element={<LoginPage />} />
+            <Route path="/auth/register" element={<RegisterPage />} />
+            <Route
+              path="/auth/forgot-password"
+              element={<ForgotPasswordPage />}
+            />
+            <Route
+              path="/auth/reset-password"
+              element={<ResetPasswordPage />}
+            />
+            <Route path="/auth/activate/:token" element={<ActivatePage />} />
+            <Route path="/u/:username" element={<PublicProfilePage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/game/:matchId"
+              element={
+                <ProtectedRoute>
+                  <GamePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
     </BrowserRouter>
   );
 }

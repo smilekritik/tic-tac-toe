@@ -20,7 +20,7 @@ export default function Layout({ children }) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
       <header style={{ borderBottom: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}>
         <div style={{ maxWidth: 'min(512px, 90vw)', margin: '0 auto', padding: '0 16px', height: 'min(56px, 7vh)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <Link to="/dashboard" style={{ fontWeight: 700, fontSize: 'min(18px, 2.5vh)', flexShrink: 0 }}>

@@ -20,3 +20,6 @@ rebuild.ps1
 
 # Uploads
 uploads/
+
+#logs
+backend/logs/app.log
