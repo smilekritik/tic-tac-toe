@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../../lib/prisma');
 const mailService = require('../mail/mail.service');
 const env = require('../../config/env');
+const { enforceBusinessRateLimit } = require('../../lib/businessRateLimit');
 
 function createError(code, status) {
   const err = new Error(code);
@@ -49,7 +50,10 @@ async function updateProfile(userId, { preferredLanguage, chatEnabledDefault, pu
 }
 
 async function updateUsername(userId, username) {
-  const existing = await prisma.user.findUnique({ where: { username } });
+  const existing = await prisma.user.findFirst({
+    where: { username: { equals: username, mode: 'insensitive' } },
+    select: { id: true },
+  });
   if (existing) throw createError('USERNAME_TAKEN', 409);
 
   const user = await prisma.user.update({
@@ -61,7 +65,13 @@ async function updateUsername(userId, username) {
 }
 
 async function requestEmailChange(userId, newEmail) {
-  const existing = await prisma.user.findUnique({ where: { email: newEmail } });
+  // Business limit: not more than 1 email-change confirmation per 60s.
+  enforceBusinessRateLimit({ key: `emailChange:user:${userId}`, minIntervalMs: 60 * 1000 });
+
+  const existing = await prisma.user.findFirst({
+    where: { email: { equals: newEmail, mode: 'insensitive' } },
+    select: { id: true },
+  });
   if (existing) throw createError('EMAIL_TAKEN', 409);
 
   await prisma.userEmailChange.updateMany({
@@ -90,6 +100,9 @@ async function requestEmailChange(userId, newEmail) {
 }
 
 async function uploadAvatar(userId, filePath) {
+  // Business limit: not more than 5 avatar changes per 10 minutes.
+  enforceBusinessRateLimit({ key: `avatar:user:${userId}`, maxInWindow: 5, windowMs: 10 * 60 * 1000 });
+
   const profile = await prisma.userProfile.update({
     where: { userId },
     data: { avatarPath: filePath },

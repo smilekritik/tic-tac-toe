@@ -2,8 +2,9 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const prisma = require('../../lib/prisma');
 const tokenService = require('./token.service');
-const mailService = require('../../lib/mail.service');
+const mailService = require('../mail/mail.service');
 const env = require('../../config/env');
+const { enforceBusinessRateLimit } = require('../../lib/businessRateLimit');
 
 function createError(code, status) {
   const err = new Error(code);
@@ -14,10 +15,16 @@ function createError(code, status) {
 
 async function register({ email, username, password, lang = 'en' }) {
   const existing = await prisma.user.findFirst({
-    where: { OR: [{ email }, { username }] },
+    where: {
+      OR: [
+        { email: { equals: email, mode: 'insensitive' } },
+        { username: { equals: username, mode: 'insensitive' } },
+      ],
+    },
   });
   if (existing) {
-    const code = existing.email === email ? 'EMAIL_TAKEN' : 'USERNAME_TAKEN';
+    const emailTaken = existing.email?.toLowerCase?.() === email?.toLowerCase?.();
+    const code = emailTaken ? 'EMAIL_TAKEN' : 'USERNAME_TAKEN';
     throw createError(code, 409);
   }
 
@@ -46,7 +53,12 @@ async function register({ email, username, password, lang = 'en' }) {
 
 async function login({ login, password, ip, userAgent }) {
   const user = await prisma.user.findFirst({
-    where: { OR: [{ email: login }, { username: login }] },
+    where: {
+      OR: [
+        { email: { equals: login, mode: 'insensitive' } },
+        { username: { equals: login, mode: 'insensitive' } },
+      ],
+    },
   });
 
   const success = !!user && (await bcrypt.compare(password, user.passwordHash));
@@ -139,6 +151,9 @@ async function forgotPassword(email) {
   });
   if (!user) return;
 
+  enforceBusinessRateLimit({ key: `pwdReset:user:${user.id}:cooldown`, minIntervalMs: 60 * 1000 });
+  enforceBusinessRateLimit({ key: `pwdReset:user:${user.id}:burst`, maxInWindow: 3, windowMs: 10 * 60 * 1000 });
+
   await prisma.passwordResetToken.updateMany({
     where: { userId: user.id, usedAt: null },
     data: { usedAt: new Date() },
@@ -190,6 +205,9 @@ async function resendVerification(userId) {
   if (user.emailVerified) {
     throw createError('EMAIL_ALREADY_VERIFIED', 400);
   }
+
+  // Business limit: not more than 1 verification email per 60s.
+  enforceBusinessRateLimit({ key: `verifyEmail:user:${user.id}`, minIntervalMs: 60 * 1000 });
 
   await prisma.emailVerificationToken.updateMany({
     where: { userId: user.id, usedAt: null },

@@ -42,7 +42,7 @@ function startReconnectTimer(io, matchId, disconnectedUserId) {
     // Player didn't reconnect in time — forfeit
     const winner = current.playerX.userId === disconnectedUserId ? current.playerO : current.playerX;
     await endMatch(io, matchId, winner.userId, 'abandon');
-  }, RECONNECT_TIMEOUT_MS);
+  }, TURN_TIMEOUT_MS);
 
   gameStateService.updateMatch(matchId, { [timerKey]: reconnectTimer });
 }

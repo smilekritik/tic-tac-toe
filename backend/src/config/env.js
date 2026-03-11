@@ -31,8 +31,21 @@ const env = {
 
   security: {
     bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS) || 10,
-    rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 900000,
-    rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+    // General API HTTP rate limiting
+    httpRateLimitWindowMs: parseInt(process.env.HTTP_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    httpRateLimitMax: parseInt(process.env.HTTP_RATE_LIMIT_MAX) || 300,
+
+    // Auth endpoints HTTP rate limiting
+    authRateLimitWindowMs: parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    authRateLimitMax: parseInt(process.env.AUTH_RATE_LIMIT_MAX) || 100,
+
+    // Login endpoint HTTP rate limiting
+    loginRateLimitWindowMs: parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    loginRateLimitMax: parseInt(process.env.LOGIN_RATE_LIMIT_MAX) || 20,
+
+    // Upload endpoints HTTP rate limiting
+    uploadRateLimitWindowMs: parseInt(process.env.UPLOAD_RATE_LIMIT_WINDOW_MS) || 10 * 60 * 1000,
+    uploadRateLimitMax: parseInt(process.env.UPLOAD_RATE_LIMIT_MAX) || 30,
   },
 };
 
