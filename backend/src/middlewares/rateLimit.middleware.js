@@ -1,5 +1,6 @@
 const rateLimit = require('express-rate-limit');
 const env = require('../config/env');
+const { getLogger, withRequestContext } = require('../lib/logger');
 
 function getUserOrIpKey(req) {
   const userId = req.user?.sub || req.user?.id;
@@ -21,6 +22,28 @@ function createRateLimiter({
     legacyHeaders: false,
     keyGenerator: keyGenerator || ((req) => req.ip),
     handler: (req, res) => {
+      const context = {
+        requestId: req.requestId,
+        ip: req.ip,
+        method: req.method,
+        route: req.originalUrl || req.url,
+        userId: req.user?.id || req.user?.sub,
+      };
+      withRequestContext(context, () => {
+        const log = getLogger('security');
+        log.warn(
+          {
+            event: 'http_rate_limit_hit',
+            requestId: req.requestId,
+            ip: req.ip,
+            route: req.originalUrl || req.url,
+            method: req.method,
+            code,
+          },
+          'HTTP rate limit hit',
+        );
+      });
+
       res.status(429).json({
         error: {
           code,

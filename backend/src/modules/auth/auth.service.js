@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const prisma = require('../../lib/prisma');
+const { getLogger, withRequestContext } = require('../../lib/logger');
 const tokenService = require('./token.service');
 const mailService = require('../mail/mail.service');
 const env = require('../../config/env');
@@ -14,6 +15,7 @@ function createError(code, status) {
 }
 
 async function register({ email, username, password, lang = 'en' }) {
+  const log = getLogger('auth');
   const existing = await prisma.user.findFirst({
     where: {
       OR: [
@@ -25,6 +27,17 @@ async function register({ email, username, password, lang = 'en' }) {
   if (existing) {
     const emailTaken = existing.email?.toLowerCase?.() === email?.toLowerCase?.();
     const code = emailTaken ? 'EMAIL_TAKEN' : 'USERNAME_TAKEN';
+    withRequestContext({}, () => {
+      log.warn(
+        {
+          event: 'register_conflict',
+          code,
+          email,
+          username,
+        },
+        'Registration conflict',
+      );
+    });
     throw createError(code, 409);
   }
 
@@ -48,10 +61,22 @@ async function register({ email, username, password, lang = 'en' }) {
   });
 
   await mailService.sendVerificationEmail(user.email, verifyToken.token, lang).catch(() => {});
+
+  withRequestContext({}, () => {
+    log.info(
+      {
+        event: 'register_success',
+        userId: user.id,
+        email: user.email,
+      },
+      'User registered',
+    );
+  });
   return { user, verifyToken: verifyToken.token };
 }
 
 async function login({ login, password, ip, userAgent }) {
+  const log = getLogger('auth');
   const user = await prisma.user.findFirst({
     where: {
       OR: [
@@ -70,6 +95,17 @@ async function login({ login, password, ip, userAgent }) {
   }
 
   if (!user || !success) {
+    withRequestContext({}, () => {
+      log.warn(
+        {
+          event: 'login_failed',
+          ip,
+          userAgent,
+          login,
+        },
+        'Login failed',
+      );
+    });
     throw createError('INVALID_CREDENTIALS', 401);
   }
 
@@ -78,6 +114,18 @@ async function login({ login, password, ip, userAgent }) {
 
   await prisma.refreshToken.create({
     data: { userId: user.id, tokenHash: hash, expiresAt, ipAddress: ip, userAgent },
+  });
+
+  withRequestContext({}, () => {
+    log.info(
+      {
+        event: 'login_success',
+        userId: user.id,
+        ip,
+        userAgent,
+      },
+      'Login success',
+    );
   });
 
   return { user, accessToken, refreshToken };

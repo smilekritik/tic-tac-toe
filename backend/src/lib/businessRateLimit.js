@@ -1,4 +1,5 @@
 const buckets = new Map();
+const { getLogger, withRequestContext } = require('./logger');
 
 function createError(code, status, meta) {
   const err = new Error(code);
@@ -26,6 +27,20 @@ function enforceBusinessRateLimit({ key, maxInWindow, windowMs, minIntervalMs })
     const delta = t - ts[ts.length - 1];
     if (delta < minIntervalMs) {
       const retryAfterMs = minIntervalMs - delta;
+
+      withRequestContext({}, () => {
+        const log = getLogger('security');
+        log.warn(
+          {
+            event: 'business_rate_limit_hit',
+            key,
+            reason: 'minIntervalMs',
+            retryAfterMs,
+          },
+          'Business rate limit hit (interval)',
+        );
+      });
+
       throw createError('BUSINESS_RATE_LIMIT', 429, { retryAfterMs });
     }
   }
@@ -37,6 +52,20 @@ function enforceBusinessRateLimit({ key, maxInWindow, windowMs, minIntervalMs })
     if (ts.length >= maxInWindow) {
       const oldest = ts[0];
       const retryAfterMs = Math.max(0, oldest + windowMs - t);
+
+      withRequestContext({}, () => {
+        const log = getLogger('security');
+        log.warn(
+          {
+            event: 'business_rate_limit_hit',
+            key,
+            reason: 'maxInWindow',
+            retryAfterMs,
+          },
+          'Business rate limit hit (window)',
+        );
+      });
+
       throw createError('BUSINESS_RATE_LIMIT', 429, { retryAfterMs });
     }
   }
