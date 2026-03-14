@@ -1,0 +1,23 @@
+paths:
+  /api/game/active:
+    get:
+      tags:
+        - Game
+      summary: Check if user has an active match
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Active match status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matchId:
+                    type: string
+                    format: uuid
+                    nullable: true
+                    description: Active match ID or null if no active match
+        '401':
+          $ref: '#/components/responses/Unauthorized'

@@ -1,0 +1,31 @@
+paths:
+  /api/users/{username}:
+    get:
+      tags:
+        - Users
+      summary: Get user public profile by username
+      parameters:
+        - in: path
+          name: username
+          required: true
+          schema:
+            type: string
+          description: Username to look up
+      responses:
+        '200':
+          description: User public profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  profile:
+                    $ref: '#/components/schemas/UserProfile'
+                  ratings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserRating'
+        '404':
+          $ref: '#/components/responses/NotFound'

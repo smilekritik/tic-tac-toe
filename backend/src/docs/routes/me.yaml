@@ -1,0 +1,137 @@
+paths:
+  /api/me:
+    get:
+      tags:
+        - Me
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  profile:
+                    $ref: '#/components/schemas/UserProfile'
+                  ratings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserRating'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/me/profile:
+    patch:
+      tags:
+        - Me
+      summary: Update current user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                preferredLanguage:
+                  type: string
+                  enum: [en, pl, uk]
+                chatEnabledDefault:
+                  type: boolean
+                publicProfileEnabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/me/username:
+    patch:
+      tags:
+        - Me
+      summary: Update username
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+      responses:
+        '200':
+          description: Username updated
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/me/email:
+    patch:
+      tags:
+        - Me
+      summary: Request email change
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - newEmail
+              properties:
+                newEmail:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Email change requested
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/me/avatar:
+    post:
+      tags:
+        - Me
+      summary: Upload avatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Avatar uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatarPath:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
