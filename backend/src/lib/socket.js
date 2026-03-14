@@ -3,10 +3,13 @@ const tokenService = require('../modules/auth/token.service');
 const prisma = require('./prisma');
 const { registerMatchmakingHandlers } = require('../modules/matchmaking/matchmaking.handler');
 const { registerGameHandlers } = require('../modules/game/game.handler');
+const { getLogger } = require('./logger');
 
 let io;
 
 function initSocket(httpServer, frontendUrl) {
+  const log = getLogger('socket');
+  
   io = new Server(httpServer, {
     cors: { origin: frontendUrl, credentials: true },
   });
@@ -30,14 +33,14 @@ function initSocket(httpServer, frontendUrl) {
 
   io.on('connection', (socket) => {
     const { id, username } = socket.user;
-    console.log(`[socket] connected: ${username} (${socket.id})`);
+    log.info({ event: 'socket_connected', userId: id, username, socketId: socket.id }, 'Socket connected');
     socket.join(`user:${id}`);
 
     registerMatchmakingHandlers(socket, io);
     registerGameHandlers(socket, io);
 
     socket.on('disconnect', (reason) => {
-      console.log(`[socket] disconnected: ${username} — ${reason}`);
+      log.info({ event: 'socket_disconnected', userId: id, username, reason }, 'Socket disconnected');
     });
 
     socket.on('ping', () => socket.emit('pong', { time: Date.now() }));

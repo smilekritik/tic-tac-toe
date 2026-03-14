@@ -13,8 +13,18 @@ function generateAccessToken(user) {
 function generateRefreshToken() {
   const token = crypto.randomBytes(40).toString('hex');
   const hash = hashToken(token);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const expirationMs = parseRefreshExpiration(env.jwt.refreshExpiration);
+  const expiresAt = new Date(Date.now() + expirationMs);
   return { token, hash, expiresAt };
+}
+
+function parseRefreshExpiration(expiration) {
+  const match = expiration.match(/^(\d+)([smhd])$/);
+  if (!match) return 7 * 24 * 60 * 60 * 1000; // default 7 days
+  const value = parseInt(match[1]);
+  const unit = match[2];
+  const multipliers = { s: 1000, m: 60 * 1000, h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000 };
+  return value * (multipliers[unit] || 1000);
 }
 
 function hashToken(token) {

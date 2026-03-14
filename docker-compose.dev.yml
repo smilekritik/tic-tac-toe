@@ -28,7 +28,7 @@ services:
     container_name: tictactoe-backend
     restart: unless-stopped
     env_file:
-      - .env.local
+      - .env
     ports:
       - "${PORT}:5000"
       - "5555:5555"
@@ -49,7 +49,7 @@ services:
     container_name: tictactoe-frontend
     restart: unless-stopped
     env_file:
-      - .env.local
+      - .env
     ports:
       - "${FRONTEND_PORT}:3000"
     volumes:

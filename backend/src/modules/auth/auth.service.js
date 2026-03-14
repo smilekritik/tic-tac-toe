@@ -131,7 +131,8 @@ async function login({ login, password, ip, userAgent }) {
   return { user, accessToken, refreshToken };
 }
 
-async function refresh(refreshToken) {
+async function refresh(refreshToken, ip, userAgent) {
+  const log = getLogger('auth');
   const hash = tokenService.hashToken(refreshToken);
   const stored = await prisma.refreshToken.findFirst({
     where: { tokenHash: hash, revokedAt: null },
@@ -144,7 +145,29 @@ async function refresh(refreshToken) {
   const user = await prisma.user.findUnique({ where: { id: stored.userId } });
   const accessToken = tokenService.generateAccessToken(user);
 
-  return { accessToken };
+  // Rotate refresh token
+  await prisma.refreshToken.update({
+    where: { id: stored.id },
+    data: { revokedAt: new Date() },
+  });
+
+  const { token: newRefreshToken, hash: newHash, expiresAt } = tokenService.generateRefreshToken();
+  await prisma.refreshToken.create({
+    data: { userId: user.id, tokenHash: newHash, expiresAt, ipAddress: ip, userAgent },
+  });
+
+  withRequestContext({}, () => {
+    log.info(
+      {
+        event: 'token_refresh',
+        userId: user.id,
+        ip,
+      },
+      'Token refreshed',
+    );
+  });
+
+  return { accessToken, refreshToken: newRefreshToken };
 }
 
 async function logout(refreshToken) {

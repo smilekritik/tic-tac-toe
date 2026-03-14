@@ -30,7 +30,9 @@ export function useSocket() {
     });
 
     newSocket.on('connect_error', (err) => {
-      console.error('[socket] connect error:', err.message);
+      if (import.meta.env.DEV) {
+        console.error('[socket] connect error:', err.message);
+      }
       setConnected(false);
     });
 

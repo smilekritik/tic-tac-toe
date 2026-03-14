@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 const env = require('../../config/env');
 const { t } = require('../../lib/i18n');
+const { getLogger } = require('../../lib/logger');
 
 const transporter = nodemailer.createTransport({
   host: env.smtp.host,
@@ -14,8 +15,9 @@ function buildHtml(text, url) {
 }
 
 async function sendVerificationEmail(email, token, lang = 'en') {
+  const log = getLogger('mail');
   const url = `${env.frontendUrl}/auth/activate/${token}`;
-  console.log(`[mail] verification url: ${url}`);
+  log.info({ event: 'verification_email', email, url }, 'Sending verification email');
   await transporter.sendMail({
     from: env.smtp.from,
     to: email,
@@ -25,8 +27,9 @@ async function sendVerificationEmail(email, token, lang = 'en') {
 }
 
 async function sendPasswordResetEmail(email, token, lang = 'en') {
+  const log = getLogger('mail');
   const url = `${env.frontendUrl}/auth/reset-password?token=${token}`;
-  console.log(`[mail] reset url: ${url}`);
+  log.info({ event: 'password_reset_email', email, url }, 'Sending password reset email');
   await transporter.sendMail({
     from: env.smtp.from,
     to: email,
@@ -36,8 +39,9 @@ async function sendPasswordResetEmail(email, token, lang = 'en') {
 }
 
 async function sendEmailChangeConfirmation(email, token, lang = 'en') {
+  const log = getLogger('mail');
   const url = `${env.frontendUrl}/auth/confirm-email?token=${token}`;
-  console.log(`[mail] email change url: ${url}`);
+  log.info({ event: 'email_change_confirmation', email, url }, 'Sending email change confirmation');
   await transporter.sendMail({
     from: env.smtp.from,
     to: email,

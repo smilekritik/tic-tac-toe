@@ -39,7 +39,10 @@ async function refresh(req, res, next) {
   try {
     const token = req.cookies?.[REFRESH_COOKIE];
     if (!token) return res.status(401).json({ error: { message: 'No refresh token' } });
-    const { accessToken } = await authService.refresh(token);
+    const ip = req.ip;
+    const userAgent = req.headers['user-agent'];
+    const { accessToken, refreshToken } = await authService.refresh(token, ip, userAgent);
+    res.cookie(REFRESH_COOKIE, refreshToken, COOKIE_OPTS);
     res.json({ accessToken });
   } catch (err) {
     next(err);
