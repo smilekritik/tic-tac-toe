@@ -9,6 +9,7 @@ const requestContext = require('./middlewares/requestContext.middleware');
 const httpLogger = require('./middlewares/httpLogger.middleware');
 const { apiLimiter } = require('./middlewares/rateLimit.middleware');
 const env = require('./config/env');
+const docsRoutes = require('./routes/docs.routes');
 const authRoutes = require('./modules/auth/auth.routes');
 const meRoutes = require('./modules/me/me.routes');
 const usersRoutes = require('./modules/users/users.routes');
@@ -27,6 +28,7 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+app.use(docsRoutes);
 app.use('/api', apiLimiter);
 app.use(httpLogger);
 
