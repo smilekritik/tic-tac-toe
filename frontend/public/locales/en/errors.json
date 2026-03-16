@@ -11,5 +11,8 @@
   "USER_NOT_FOUND": "User not found",
   "PROFILE_PRIVATE": "This profile is private",
   "NO_FILE": "No file uploaded",
-  "INVALID_FILE_TYPE": "Only JPEG, PNG and WebP images are allowed"
+  "INVALID_FILE_TYPE": "Only JPEG, PNG and WebP images are allowed",
+  "ACTIVE_MATCH_EXISTS": "You already have an active match",
+  "RECONNECT_WINDOW_ACTIVE": "You already have a match waiting for reconnect",
+  "GAME_BANNED": "You are temporarily banned from matchmaking"
 }

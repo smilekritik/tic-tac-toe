@@ -12,7 +12,7 @@ export default function DashboardPage() {
   const connected = useSocketStore((s) => s.connected);
   const socket = useSocketStore((s) => s.socket);
   const navigate = useNavigate();
-  const { t } = useTranslation(['auth', 'common']);
+  const { t } = useTranslation(['auth', 'common', 'errors']);
   const [inQueue, setInQueue] = useState(false);
   const [activeMatchId, setActiveMatchId] = useState(null);
   const [matchmakingDisabled, setMatchmakingDisabled] = useState(false);
@@ -27,29 +27,43 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!socket) return;
+
+    const handleMatchmakingError = ({ code }) => {
+      const message = t(`errors:${code || 'SOMETHING_WRONG'}`, {
+        defaultValue: code || t('errors:SOMETHING_WRONG'),
+      });
+
+      if (code === 'EMAIL_NOT_VERIFIED' || code === 'GAME_BANNED') {
+        setMatchmakingDisabled(true);
+      }
+
+      if (code === 'ACTIVE_MATCH_EXISTS' || code === 'RECONNECT_WINDOW_ACTIVE') {
+        client.get('/game/active').then(({ data }) => {
+          if (data.matchId) setActiveMatchId(data.matchId);
+        }).catch(() => {});
+      }
+
+      setInQueue(false);
+      setMatchmakingError(message);
+    };
+
     socket.on('matchmaking:queued', () => setInQueue(true));
     socket.on('matchmaking:left', () => setInQueue(false));
     socket.on('matchmaking:matched', ({ matchId, symbol }) => {
       setInQueue(false);
+      setMatchmakingError(null);
       sessionStorage.setItem(`match:${matchId}:symbol`, symbol);
       navigate(`/game/${matchId}`);
     });
-    socket.on('matchmaking:error', ({ code }) => {
-      if (code === 'EMAIL_NOT_VERIFIED') {
-        setMatchmakingDisabled(true);
-        setInQueue(false);
-        setMatchmakingError('Please verify your email before searching for a game.');
-      } else {
-        setMatchmakingError(code || 'Matchmaking error');
-      }
-    });
+    socket.on('matchmaking:error', handleMatchmakingError);
+
     return () => {
       socket.off('matchmaking:queued');
       socket.off('matchmaking:left');
       socket.off('matchmaking:matched');
-      socket.off('matchmaking:error');
+      socket.off('matchmaking:error', handleMatchmakingError);
     };
-  }, [socket]);
+  }, [socket, navigate, t]);
 
   const handleFindGame = () => {
     if (!socket) return;

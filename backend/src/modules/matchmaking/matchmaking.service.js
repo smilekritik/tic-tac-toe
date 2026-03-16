@@ -34,8 +34,7 @@ async function tryMatch(currentUserId) {
         matchType: 'ranked',
         playerXId: player1.userId,
         playerOId: player2.userId,
-        status: 'active',
-        startedAt: new Date(),
+        status: 'waiting',
       },
     });
 

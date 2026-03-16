@@ -99,7 +99,7 @@ const options = {
             playerOId: { type: 'string', format: 'uuid' },
             winnerId: { type: 'string', format: 'uuid', nullable: true },
             status: { type: 'string', enum: ['waiting', 'active', 'finished'] },
-            resultType: { type: 'string', enum: ['win', 'draw', 'timeout'], nullable: true },
+            resultType: { type: 'string', enum: ['win', 'draw', 'timeout', 'abandon'], nullable: true },
             startedAt: { type: 'string', format: 'date-time', nullable: true },
             finishedAt: { type: 'string', format: 'date-time', nullable: true },
             durationSeconds: { type: 'integer', nullable: true },

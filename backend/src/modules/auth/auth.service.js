@@ -60,7 +60,12 @@ async function register({ email, username, password, lang = 'en' }) {
     },
   });
 
-  await mailService.sendVerificationEmail(user.email, verifyToken.token, lang).catch(() => {});
+  await mailService.sendVerificationEmail(
+    user.email,
+    verifyToken.token,
+    lang,
+    { userId: user.id },
+  ).catch(() => {});
 
   withRequestContext({}, () => {
     log.info(
@@ -239,7 +244,12 @@ async function forgotPassword(email) {
   });
 
   const lang = user.profile?.preferredLanguage || 'en';
-  await mailService.sendPasswordResetEmail(user.email, record.token, lang).catch(() => {});
+  await mailService.sendPasswordResetEmail(
+    user.email,
+    record.token,
+    lang,
+    { userId: user.id },
+  ).catch(() => {});
   return { user, resetToken: record.token };
 }
 
@@ -294,7 +304,12 @@ async function resendVerification(userId) {
   });
 
   const lang = user.profile?.preferredLanguage || 'en';
-  await mailService.sendVerificationEmail(user.email, verifyToken.token, lang).catch(() => {});
+  await mailService.sendVerificationEmail(
+    user.email,
+    verifyToken.token,
+    lang,
+    { userId: user.id },
+  ).catch(() => {});
 
   return { message: 'Verification email sent' };
 }

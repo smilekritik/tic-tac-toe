@@ -94,7 +94,12 @@ async function requestEmailChange(userId, newEmail) {
   });
 
   const lang = user.profile?.preferredLanguage || 'en';
-  await mailService.sendEmailChangeConfirmation(newEmail, record.token, lang).catch(() => {});
+  await mailService.sendEmailChangeConfirmation(
+    newEmail,
+    record.token,
+    lang,
+    { userId },
+  ).catch(() => {});
 
   return { message: 'Confirmation email sent' };
 }

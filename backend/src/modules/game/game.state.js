@@ -7,9 +7,13 @@ function createMatch(matchId, playerX, playerO) {
     playerX,
     playerO,
     gameState: null,
+    startedAt: null,
     timer: null,
+    turnDeadlineAt: null,
     connectedPlayers: new Set(),
     disconnectedPlayers: new Set(),
+    reconnectTimers: {},
+    reconnectDeadlines: {},
   });
   userActiveMatch.set(playerX.userId, matchId);
   userActiveMatch.set(playerO.userId, matchId);

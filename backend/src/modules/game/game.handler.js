@@ -13,44 +13,119 @@ function emitMatchState(io, matchId, match) {
     moveCount: match.gameState.moveCount,
     playerX: match.playerX.username,
     playerO: match.playerO.username,
+    turnDeadlineAt: match.turnDeadlineAt,
+  });
+}
+
+function buildTimerPayload(matchId, match) {
+  if (!match?.gameState || !match.turnDeadlineAt) return null;
+
+  return {
+    matchId,
+    currentSymbol: match.gameState.currentSymbol,
+    turnDeadlineAt: match.turnDeadlineAt,
+  };
+}
+
+function emitTimerUpdate(target, matchId, match) {
+  const payload = buildTimerPayload(matchId, match);
+  if (!payload) return;
+  target.emit('game:timer-update', payload);
+}
+
+function clearTurnTimer(matchId) {
+  const match = gameStateService.getMatch(matchId);
+  if (!match) return;
+
+  if (match.timer) clearTimeout(match.timer);
+
+  gameStateService.updateMatch(matchId, {
+    timer: null,
+    turnDeadlineAt: null,
   });
 }
 
 function startTimer(io, matchId) {
+  clearTurnTimer(matchId);
+
   const match = gameStateService.getMatch(matchId);
-  if (!match) return;
-  if (match.timer) clearTimeout(match.timer);
+  if (!match || !match.gameState) return;
+
+  const turnDeadlineAt = Date.now() + TURN_TIMEOUT_MS;
   const timer = setTimeout(async () => {
     const current = gameStateService.getMatch(matchId);
     if (!current) return;
     const winner = current.gameState.currentSymbol === 'X' ? current.playerO : current.playerX;
     await endMatch(io, matchId, winner.userId, 'timeout');
   }, TURN_TIMEOUT_MS);
-  gameStateService.updateMatch(matchId, { timer });
+
+  gameStateService.updateMatch(matchId, {
+    timer,
+    turnDeadlineAt,
+  });
 }
 
 function startReconnectTimer(io, matchId, disconnectedUserId) {
   const match = gameStateService.getMatch(matchId);
   if (!match) return;
 
-  const timerKey = `reconnectTimer_${disconnectedUserId}`;
-  if (match[timerKey]) clearTimeout(match[timerKey]);
+  const reconnectTimers = { ...(match.reconnectTimers || {}) };
+  const reconnectDeadlines = { ...(match.reconnectDeadlines || {}) };
+
+  if (reconnectTimers[disconnectedUserId]) {
+    clearTimeout(reconnectTimers[disconnectedUserId]);
+  }
+
+  reconnectDeadlines[disconnectedUserId] = Date.now() + TURN_TIMEOUT_MS;
 
   const reconnectTimer = setTimeout(async () => {
     const current = gameStateService.getMatch(matchId);
     if (!current) return;
-    // Player didn't reconnect in time — forfeit
     const winner = current.playerX.userId === disconnectedUserId ? current.playerO : current.playerX;
     await endMatch(io, matchId, winner.userId, 'abandon');
   }, TURN_TIMEOUT_MS);
 
-  gameStateService.updateMatch(matchId, { [timerKey]: reconnectTimer });
+  reconnectTimers[disconnectedUserId] = reconnectTimer;
+
+  gameStateService.updateMatch(matchId, {
+    reconnectTimers,
+    reconnectDeadlines,
+  });
+}
+
+async function maybeStartMatch(io, matchId) {
+  const match = gameStateService.getMatch(matchId);
+  if (!match || match.gameState || match.connectedPlayers.size < 2) return;
+
+  const startedAt = new Date();
+
+  await prisma.match.update({
+    where: { id: matchId },
+    data: {
+      status: 'active',
+      startedAt,
+    },
+  });
+
+  gameStateService.updateMatch(matchId, {
+    gameState: engine.init(),
+    startedAt,
+  });
+
+  startTimer(io, matchId);
 }
 
 async function endMatch(io, matchId, winnerId, reason) {
   const match = gameStateService.getMatch(matchId);
   if (!match) return;
-  if (match.timer) clearTimeout(match.timer);
+
+  clearTurnTimer(matchId);
+
+  Object.values(match.reconnectTimers || {}).forEach((timer) => clearTimeout(timer));
+
+  const durationSeconds = match.startedAt
+    ? Math.max(0, Math.floor((Date.now() - match.startedAt.getTime()) / 1000))
+    : null;
 
   await prisma.match.update({
     where: { id: matchId },
@@ -59,6 +134,7 @@ async function endMatch(io, matchId, winnerId, reason) {
       winnerId: winnerId || null,
       resultType: reason,
       finishedAt: new Date(),
+      durationSeconds,
     },
   });
 
@@ -82,7 +158,6 @@ async function saveMoveToDb(matchId, playerId, symbol, position, moveNumber) {
 function registerGameHandlers(socket, io) {
   const { id: userId } = socket.user;
 
-  // Handle reconnection to active match
   socket.on('game:join', async ({ matchId }) => {
     const match = gameStateService.getMatch(matchId);
     if (!match) return socket.emit('game:error', { code: 'MATCH_NOT_FOUND' });
@@ -95,36 +170,41 @@ function registerGameHandlers(socket, io) {
     const connected = new Set(match.connectedPlayers);
     connected.add(userId);
     const disconnected = new Set(match.disconnectedPlayers);
-    disconnected.delete(userId);
+    const wasDisconnected = disconnected.delete(userId);
+    const reconnectTimers = { ...(match.reconnectTimers || {}) };
+    const reconnectDeadlines = { ...(match.reconnectDeadlines || {}) };
 
-    // Clear reconnect timer if exists
-    const timerKey = `reconnectTimer_${userId}`;
-    if (match[timerKey]) {
-      clearTimeout(match[timerKey]);
+    if (reconnectTimers[userId]) {
+      clearTimeout(reconnectTimers[userId]);
+      delete reconnectTimers[userId];
     }
+
+    delete reconnectDeadlines[userId];
 
     gameStateService.updateMatch(matchId, {
       connectedPlayers: connected,
       disconnectedPlayers: disconnected,
-      [timerKey]: null,
+      reconnectTimers,
+      reconnectDeadlines,
     });
 
-    const wasDisconnected = match.disconnectedPlayers?.has(userId);
-
-    if (!gameStateService.getMatch(matchId).gameState) {
-      gameStateService.updateMatch(matchId, { gameState: engine.init() });
-      startTimer(io, matchId);
-    } else if (wasDisconnected) {
-      // Notify opponent about reconnection
+    if (wasDisconnected) {
       socket.to(`match:${matchId}`).emit('game:opponent-reconnected', { userId });
     }
 
-    emitMatchState(io, matchId, gameStateService.getMatch(matchId));
+    await maybeStartMatch(io, matchId);
+
+    const updatedMatch = gameStateService.getMatch(matchId);
+    if (!updatedMatch?.gameState) return;
+
+    emitMatchState(io, matchId, updatedMatch);
+    emitTimerUpdate(socket, matchId, updatedMatch);
   });
 
   socket.on('game:move', async ({ matchId, position }) => {
     const match = gameStateService.getMatch(matchId);
     if (!match) return socket.emit('game:error', { code: 'MATCH_NOT_FOUND' });
+    if (!match.gameState) return socket.emit('game:error', { code: 'GAME_NOT_STARTED' });
 
     const isX = match.playerX.userId === userId;
     const isO = match.playerO.userId === userId;
@@ -145,27 +225,32 @@ function registerGameHandlers(socket, io) {
     const winResult = engine.checkWinner(newState.board);
     if (winResult) {
       const winnerId = winResult.winner === 'X' ? match.playerX.userId : match.playerO.userId;
+      clearTurnTimer(matchId);
       io.to(`match:${matchId}`).emit('game:state', {
         board: newState.board,
         currentSymbol: newState.currentSymbol,
         moveCount: newState.moveCount,
         playerX: match.playerX.username,
         playerO: match.playerO.username,
+        turnDeadlineAt: null,
         winLine: winResult.line,
       });
       return await endMatch(io, matchId, winnerId, 'win');
     }
 
     if (engine.checkDraw(newState.board)) {
+      clearTurnTimer(matchId);
       emitMatchState(io, matchId, gameStateService.getMatch(matchId));
       return await endMatch(io, matchId, null, 'draw');
     }
 
-    emitMatchState(io, matchId, gameStateService.getMatch(matchId));
     startTimer(io, matchId);
+
+    const updatedMatch = gameStateService.getMatch(matchId);
+    emitMatchState(io, matchId, updatedMatch);
+    emitTimerUpdate(io.to(`match:${matchId}`), matchId, updatedMatch);
   });
 
-  // Handle disconnect
   socket.on('disconnect', () => {
     const active = gameStateService.getActiveMatchForUser(userId);
     if (!active) return;
@@ -183,10 +268,8 @@ function registerGameHandlers(socket, io) {
       disconnectedPlayers: disconnected,
     });
 
-    // Notify opponent
     io.to(`match:${matchId}`).emit('game:opponent-disconnected', { userId });
 
-    // Start reconnect countdown
     startReconnectTimer(io, matchId, userId);
   });
 }

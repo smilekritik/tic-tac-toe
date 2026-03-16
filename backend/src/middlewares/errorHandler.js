@@ -1,6 +1,10 @@
 const { getLogger, withRequestContext } = require('../lib/logger');
 
 const errorHandler = (err, req, res, next) => {
+  if (err.code === 'LIMIT_FILE_SIZE' && !err.status) {
+    err.status = 400;
+  }
+
   const status = err.status || 500;
 
   const context = {

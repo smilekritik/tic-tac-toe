@@ -52,11 +52,37 @@ events:
           type: string
         playerO:
           type: string
+        turnDeadlineAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Server-side UNIX timestamp in milliseconds when the current turn expires.
         winLine:
           type: array
           description: Winning line coordinates (optional)
           example: |
             [{"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 2}]
+
+  game:timer-update:
+    direction: receive
+    summary: Current turn deadline
+    description: Authoritative server deadline for the active turn.
+    payload:
+      type: object
+      required:
+        - matchId
+        - currentSymbol
+        - turnDeadlineAt
+      properties:
+        matchId:
+          type: string
+          format: uuid
+        currentSymbol:
+          type: string
+          enum: [X, O]
+        turnDeadlineAt:
+          type: integer
+          format: int64
 
   game:move:
     direction: send
