@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { User, Trophy } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import client from '../api/client';
 import { useAuthStore } from '../store/auth.store';
 import Layout from '../components/Layout';
 import Avatar from '../components/Avatar';
 
+function getWinRate(rating) {
+  if (!rating?.gamesPlayed) return 0;
+  return Math.round((rating.wins / rating.gamesPlayed) * 100);
+}
+
 export default function PublicProfilePage() {
   const { username } = useParams();
-  const { t } = useTranslation(['errors', 'common']);
+  const { t } = useTranslation(['errors', 'common', 'profile']);
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +30,7 @@ export default function PublicProfilePage() {
         setError(t(`errors:${code || 'SOMETHING_WRONG'}`));
       })
       .finally(() => setLoading(false));
-  }, [username, isOwn]);
+  }, [username, isOwn, t]);
 
   if (loading) return <div className="loading">{t('common:loading')}</div>;
 
@@ -53,17 +58,25 @@ export default function PublicProfilePage() {
         {profile.ratings?.length > 0 && (
           <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
             <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Trophy size={14} /> Stats
+              <Trophy size={14} /> {t('profile:ratings')}
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {profile.ratings.map((r) => (
-                <div key={r.gameMode.code} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 'min(12px, 1.5vh)', background: 'hsl(var(--muted))', borderRadius: 8 }}>
-                  <span style={{ fontWeight: 500, fontSize: 'min(14px, 1.8vh)' }}>{r.gameMode.name}</span>
-                  <div style={{ display: 'flex', gap: 12, fontSize: 'min(14px, 1.8vh)' }}>
-                    <span>ELO: <strong>{r.eloRating}</strong></span>
+                <div key={r.gameMode.code} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 'min(12px, 1.5vh)', background: 'hsl(var(--muted))', borderRadius: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontWeight: 500, fontSize: 'min(14px, 1.8vh)' }}>{r.gameMode.name}</span>
+                    <span style={{ fontSize: 'min(14px, 1.8vh)' }}>
+                      {t('profile:rating')}: <strong>{r.eloRating}</strong>
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 'min(14px, 1.8vh)' }}>
+                    <span>{t('profile:games')}: <strong>{r.gamesPlayed}</strong></span>
                     <span style={{ color: '#4ade80' }}>W {r.wins}</span>
                     <span style={{ color: '#f87171' }}>L {r.losses}</span>
                     <span style={{ color: '#facc15' }}>D {r.draws}</span>
+                    <span>{t('profile:winRate')}: <strong>{getWinRate(r)}%</strong></span>
+                    <span>{t('profile:streak')}: <strong>{r.winStreak}</strong></span>
+                    <span>{t('profile:bestStreak')}: <strong>{r.maxWinStreak}</strong></span>
                   </div>
                 </div>
               ))}

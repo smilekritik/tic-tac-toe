@@ -1,10 +1,9 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Mail, AtSign, Globe, Upload, Save } from 'lucide-react';
+import { Upload, Save } from 'lucide-react';
 import { useMe } from '../hooks/useMe';
 import { useAuthStore } from '../store/auth.store';
 import client from '../api/client';
-import { cn } from '../lib/utils';
 import Layout from '../components/Layout';
 import Avatar from '../components/Avatar';
 

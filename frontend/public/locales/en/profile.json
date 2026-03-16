@@ -4,6 +4,13 @@
   "username": "Username",
   "email": "Email",
   "language": "Interface Language",
+  "ratings": "Ratings and Stats",
+  "rating": "Rating",
+  "games": "Games",
+  "winRate": "Win rate",
+  "streak": "Win streak",
+  "bestStreak": "Best streak",
+  "noRatings": "No games played yet",
   "save": "Save",
   "saved": "Saved!"
 }

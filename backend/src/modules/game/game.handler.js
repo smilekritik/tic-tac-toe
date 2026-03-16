@@ -5,6 +5,7 @@ const prisma = require('../../lib/prisma');
 
 const engine = createEngine(classicMode);
 const TURN_TIMEOUT_MS = 30000;
+const ELO_K_FACTOR = 32;
 
 function emitMatchState(io, matchId, match) {
   io.to(`match:${matchId}`).emit('game:state', {
@@ -31,6 +32,121 @@ function emitTimerUpdate(target, matchId, match) {
   const payload = buildTimerPayload(matchId, match);
   if (!payload) return;
   target.emit('game:timer-update', payload);
+}
+
+function getMatchScores(match, winnerId, reason) {
+  if (reason === 'draw') {
+    return { scoreX: 0.5, scoreO: 0.5 };
+  }
+
+  if (!winnerId) return null;
+
+  if (winnerId === match.playerX.userId) {
+    return { scoreX: 1, scoreO: 0 };
+  }
+
+  if (winnerId === match.playerO.userId) {
+    return { scoreX: 0, scoreO: 1 };
+  }
+
+  return null;
+}
+
+function calculateExpectedScore(playerRating, opponentRating) {
+  return 1 / (1 + 10 ** ((opponentRating - playerRating) / 400));
+}
+
+function calculateRatingDelta(playerRating, opponentRating, actualScore) {
+  const expectedScore = calculateExpectedScore(playerRating, opponentRating);
+  return Math.round(ELO_K_FACTOR * (actualScore - expectedScore));
+}
+
+function buildRatingUpdate(rating, score, delta) {
+  const isWin = score === 1;
+  const isDraw = score === 0.5;
+  const nextWinStreak = isWin ? rating.winStreak + 1 : 0;
+
+  return {
+    eloRating: rating.eloRating + delta,
+    gamesPlayed: rating.gamesPlayed + 1,
+    wins: rating.wins + (isWin ? 1 : 0),
+    losses: rating.losses + (score === 0 ? 1 : 0),
+    draws: rating.draws + (isDraw ? 1 : 0),
+    winStreak: nextWinStreak,
+    maxWinStreak: Math.max(rating.maxWinStreak, nextWinStreak),
+  };
+}
+
+async function applyMatchRatingResult(matchId, match, winnerId, reason) {
+  const dbMatch = await prisma.match.findUnique({
+    where: { id: matchId },
+    select: {
+      gameModeId: true,
+      matchType: true,
+      startedAt: true,
+      gameMode: {
+        select: {
+          isRanked: true,
+        },
+      },
+    },
+  });
+
+  const scores = getMatchScores(match, winnerId, reason);
+  if (!dbMatch || !scores) {
+    return { ratingDeltaX: null, ratingDeltaO: null };
+  }
+
+  if (!dbMatch.startedAt || dbMatch.matchType !== 'ranked' || !dbMatch.gameMode?.isRanked) {
+    return { ratingDeltaX: null, ratingDeltaO: null };
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const [ratingX, ratingO] = await Promise.all([
+      tx.userRating.upsert({
+        where: {
+          userId_gameModeId: {
+            userId: match.playerX.userId,
+            gameModeId: dbMatch.gameModeId,
+          },
+        },
+        update: {},
+        create: {
+          userId: match.playerX.userId,
+          gameModeId: dbMatch.gameModeId,
+        },
+      }),
+      tx.userRating.upsert({
+        where: {
+          userId_gameModeId: {
+            userId: match.playerO.userId,
+            gameModeId: dbMatch.gameModeId,
+          },
+        },
+        update: {},
+        create: {
+          userId: match.playerO.userId,
+          gameModeId: dbMatch.gameModeId,
+        },
+      }),
+    ]);
+
+    const ratingDeltaX = calculateRatingDelta(ratingX.eloRating, ratingO.eloRating, scores.scoreX);
+    const ratingDeltaO = -ratingDeltaX;
+
+    await Promise.all([
+      tx.userRating.update({
+        where: { id: ratingX.id },
+        data: buildRatingUpdate(ratingX, scores.scoreX, ratingDeltaX),
+      }),
+      tx.userRating.update({
+        where: { id: ratingO.id },
+        data: buildRatingUpdate(ratingO, scores.scoreO, ratingDeltaO),
+      }),
+    ]);
+
+    return { ratingDeltaX, ratingDeltaO };
+  });
 }
 
 function clearTurnTimer(matchId) {
@@ -126,6 +242,7 @@ async function endMatch(io, matchId, winnerId, reason) {
   const durationSeconds = match.startedAt
     ? Math.max(0, Math.floor((Date.now() - match.startedAt.getTime()) / 1000))
     : null;
+  const { ratingDeltaX, ratingDeltaO } = await applyMatchRatingResult(matchId, match, winnerId, reason);
 
   await prisma.match.update({
     where: { id: matchId },
@@ -135,6 +252,8 @@ async function endMatch(io, matchId, winnerId, reason) {
       resultType: reason,
       finishedAt: new Date(),
       durationSeconds,
+      ratingDeltaX,
+      ratingDeltaO,
     },
   });
 
