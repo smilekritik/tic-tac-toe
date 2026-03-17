@@ -12,6 +12,7 @@ import ProfilePage from './pages/ProfilePage';
 import PublicProfilePage from './pages/PublicProfilePage';
 import GamePage from './pages/GamePage';
 import LeaderboardPage from './pages/LeaderboardPage';
+import MatchDetailsPage from './pages/MatchDetailsPage';
 import Footer from './components/Footer';
 
 function SocketInitializer() {
@@ -39,6 +40,7 @@ export default function App() {
             />
             <Route path="/auth/activate/:token" element={<ActivatePage />} />
             <Route path="/u/:username" element={<PublicProfilePage />} />
+            <Route path="/matches/:matchId" element={<MatchDetailsPage />} />
             <Route
               path="/dashboard"
               element={

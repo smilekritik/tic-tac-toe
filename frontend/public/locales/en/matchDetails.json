@@ -1,0 +1,14 @@
+{
+  "title": "Match Details",
+  "subtitle": "Board snapshot, result, and full move list.",
+  "backToHistory": "Back to history",
+  "loading": "Loading match details...",
+  "players": "Players",
+  "result": "Result",
+  "started": "Started",
+  "duration": "Duration",
+  "ratingDelta": "Rating delta",
+  "winner": "Winner",
+  "draw": "Draw",
+  "moves": "Moves"
+}

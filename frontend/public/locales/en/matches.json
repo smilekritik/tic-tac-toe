@@ -1,0 +1,21 @@
+{
+  "title": "Match history",
+  "loading": "Loading match history...",
+  "empty": "No matches yet.",
+  "opponent": "Opponent",
+  "moves": "Moves",
+  "duration": "Duration",
+  "ratingDelta": "Rating delta",
+  "finishReason": "Finish",
+  "result": {
+    "win": "Win",
+    "loss": "Loss",
+    "draw": "Draw"
+  },
+  "reason": {
+    "win": "Win",
+    "draw": "Draw",
+    "timeout": "Timeout",
+    "abandon": "Abandon"
+  }
+}

@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trophy } from 'lucide-react';
 import client from '../api/client';
 import { useAuthStore } from '../store/auth.store';
 import Layout from '../components/Layout';
 import Avatar from '../components/Avatar';
+import MatchHistoryBlock from '../components/MatchHistoryBlock';
 
 function getWinRate(rating) {
   if (!rating?.gamesPlayed) return 0;
@@ -14,17 +15,24 @@ function getWinRate(rating) {
 
 export default function PublicProfilePage() {
   const { username } = useParams();
-  const { t } = useTranslation(['errors', 'common', 'profile']);
+  const { t } = useTranslation(['errors', 'common', 'profile', 'matches']);
   const [profile, setProfile] = useState(null);
+  const [matches, setMatches] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const currentUser = useAuthStore((s) => s.user);
   const isOwn = currentUser?.username === username;
+  const location = useLocation();
 
   useEffect(() => {
-    const req = isOwn ? client.get('/me') : client.get(`/users/${username}`);
-    req
-      .then(({ data }) => setProfile(data))
+    const profileRequest = isOwn ? client.get('/me') : client.get(`/users/${username}`);
+    const matchesRequest = isOwn ? client.get('/me/matches') : client.get(`/users/${username}/matches`);
+
+    Promise.all([profileRequest, matchesRequest])
+      .then(([profileResponse, matchesResponse]) => {
+        setProfile(profileResponse.data);
+        setMatches(matchesResponse.data.items || []);
+      })
       .catch((err) => {
         const code = err.response?.data?.error?.code;
         setError(t(`errors:${code || 'SOMETHING_WRONG'}`));
@@ -83,6 +91,8 @@ export default function PublicProfilePage() {
             </div>
           </div>
         )}
+
+        <MatchHistoryBlock t={t} matches={matches} from={`${location.pathname}${location.search}`} />
       </div>
     </Layout>
   );
