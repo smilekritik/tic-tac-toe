@@ -5,6 +5,7 @@
     "login": "Login",
     "register": "Register",
     "dashboard": "Dashboard",
+    "leaderboard": "Leaderboard",
     "logout": "Logout",
     "profile": "Profile"
   },

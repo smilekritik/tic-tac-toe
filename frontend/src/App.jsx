@@ -11,6 +11,7 @@ import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import PublicProfilePage from './pages/PublicProfilePage';
 import GamePage from './pages/GamePage';
+import LeaderboardPage from './pages/LeaderboardPage';
 import Footer from './components/Footer';
 
 function SocketInitializer() {
@@ -51,6 +52,14 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/leaderboard"
+              element={
+                <ProtectedRoute>
+                  <LeaderboardPage />
                 </ProtectedRoute>
               }
             />

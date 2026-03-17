@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, Settings, User } from 'lucide-react';
+import { LogOut, Settings, Trophy, User } from 'lucide-react';
 import { useAuthStore } from '../store/auth.store';
 import { useSocketStore } from '../store/socket.store';
 import client from '../api/client';
@@ -29,6 +29,11 @@ export default function Layout({ children }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#4ade80' : '#ef4444', flexShrink: 0 }} />
             <LanguageSwitcher />
+            {user && (
+              <Link to="/leaderboard" className="w-9 h-9 flex items-center justify-center rounded-lg bg-[hsl(var(--muted))] hover:bg-[hsl(var(--border))] transition-colors shrink-0" title={t('nav.leaderboard')}>
+                <Trophy size={18} />
+              </Link>
+            )}
             <Link to="/profile" className="w-9 h-9 flex items-center justify-center rounded-lg bg-[hsl(var(--muted))] hover:bg-[hsl(var(--border))] transition-colors shrink-0" title={t('nav.profile')}>
               <Settings size={18} />
             </Link>

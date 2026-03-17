@@ -13,6 +13,7 @@ const env = require('./config/env');
 const { resolveUploadedFile } = require('./middlewares/upload.middleware');
 const docsRoutes = require('./routes/docs.routes');
 const authRoutes = require('./modules/auth/auth.routes');
+const leaderboardRoutes = require('./modules/leaderboard/leaderboard.routes');
 const meRoutes = require('./modules/me/me.routes');
 const usersRoutes = require('./modules/users/users.routes');
 const gameRoutes = require('./modules/game/game.routes');
@@ -55,6 +56,7 @@ app.use('/api', apiLimiter);
 app.use(httpLogger);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/me', meRoutes);
 app.use('/api/users', usersRoutes);
 

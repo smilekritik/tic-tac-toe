@@ -1,0 +1,11 @@
+{
+  "title": "Leaderboard",
+  "subtitle": "Track the strongest players in each ranked mode.",
+  "topPlayers": "Top players for the selected category",
+  "empty": "No rating data yet for this category.",
+  "games": "Games",
+  "winRate": "Win rate",
+  "streak": "Streak",
+  "rating": "Rating",
+  "you": "You"
+}
