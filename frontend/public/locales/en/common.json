@@ -7,7 +7,8 @@
     "dashboard": "Dashboard",
     "leaderboard": "Leaderboard",
     "logout": "Logout",
-    "profile": "Profile"
+    "profile": "Profile",
+    "settings": "Settings"
   },
   "language": {
     "en": "English",

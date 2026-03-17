@@ -6,7 +6,8 @@
     "register": "Rejestracja",
     "dashboard": "Panel",
     "logout": "Wyloguj się",
-    "profile": "Profil"
+    "profile": "Profil",
+    "settings": "Ustawienia"
   },
   "language": {
     "en": "English",

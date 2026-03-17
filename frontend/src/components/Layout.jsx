@@ -34,7 +34,7 @@ export default function Layout({ children }) {
                 <Trophy size={18} />
               </Link>
             )}
-            <Link to="/profile" className="w-9 h-9 flex items-center justify-center rounded-lg bg-[hsl(var(--muted))] hover:bg-[hsl(var(--border))] transition-colors shrink-0" title={t('nav.profile')}>
+            <Link to="/settings" className="w-9 h-9 flex items-center justify-center rounded-lg bg-[hsl(var(--muted))] hover:bg-[hsl(var(--border))] transition-colors shrink-0" title={t('nav.settings')}>
               <Settings size={18} />
             </Link>
             {user && (

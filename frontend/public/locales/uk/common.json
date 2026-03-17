@@ -6,7 +6,8 @@
     "register": "Реєстрація",
     "dashboard": "Головна",
     "logout": "Вийти",
-    "profile": "Профіль"
+    "profile": "Профіль",
+    "settings": "Налаштування"
   },
   "language": {
     "en": "English",

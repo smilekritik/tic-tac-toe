@@ -48,13 +48,14 @@ export default function App() {
               }
             />
             <Route
-              path="/profile"
+              path="/settings"
               element={
                 <ProtectedRoute>
                   <ProfilePage />
                 </ProtectedRoute>
               }
             />
+            <Route path="/profile" element={<Navigate to="/settings" replace />} />
             <Route
               path="/leaderboard"
               element={
