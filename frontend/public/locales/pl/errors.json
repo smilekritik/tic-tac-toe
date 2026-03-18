@@ -7,5 +7,13 @@
   "TOKEN_INVALID": "Nieprawidłowy link",
   "SOMETHING_WRONG": "Coś poszło nie tak",
   "LOGIN_FAILED": "Błąd logowania",
-  "REGISTRATION_FAILED": "Błąd rejestracji"
+  "REGISTRATION_FAILED": "Błąd rejestracji",
+  "USER_NOT_FOUND": "Nie znaleziono użytkownika",
+  "MATCH_NOT_FOUND": "Nie znaleziono meczu",
+  "PROFILE_PRIVATE": "Ten profil jest prywatny",
+  "NO_FILE": "Nie przesłano pliku",
+  "INVALID_FILE_TYPE": "Dozwolone są tylko obrazy JPEG, PNG i WebP",
+  "ACTIVE_MATCH_EXISTS": "Masz już aktywny mecz",
+  "RECONNECT_WINDOW_ACTIVE": "Masz już mecz oczekujący na ponowne połączenie",
+  "GAME_BANNED": "Tymczasowo zablokowano Ci dobieranie meczu"
 }

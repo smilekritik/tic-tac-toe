@@ -1,0 +1,17 @@
+{
+  "result": {
+    "draw": "Нічия!",
+    "opponentDisconnectedWin": "Суперник відключився. Ви перемогли!",
+    "disconnectLoss": "Ви програли через відключення.",
+    "timeoutWin": "У суперника закінчився час. Ви перемогли!",
+    "timeoutLoss": "Час вийшов. Ви програли.",
+    "win": "Ви перемогли!",
+    "lose": "Ви програли!"
+  },
+  "status": {
+    "yourTurn": "Ваш хід",
+    "waitingForOpponent": "Очікування суперника...",
+    "opponentThinking": "Суперник думає..."
+  },
+  "backToLobby": "Назад до лобі"
+}

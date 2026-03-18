@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import client from '../../api/client';
 
 export default function ActivatePage() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation('auth');
   const [status, setStatus] = useState('loading');
 
   useEffect(() => {
@@ -15,24 +17,24 @@ export default function ActivatePage() {
 
   return (
     <div className="page" style={{ textAlign: 'center' }}>
-      <h1>Email Verification</h1>
+      <h1>{t('activate.title')}</h1>
 
-      {status === 'loading' && <p>Verifying...</p>}
+      {status === 'loading' && <p>{t('activate.verifying')}</p>}
 
       {status === 'success' && (
         <>
-          <p className="success">Email verified! You can now play.</p>
+          <p className="success">{t('activate.success')}</p>
           <div className="links" style={{ justifyContent: 'center', marginTop: 16 }}>
-            <button onClick={() => navigate('/auth/login')}>Go to login</button>
+            <button onClick={() => navigate('/auth/login')}>{t('activate.links.login')}</button>
           </div>
         </>
       )}
 
       {status === 'error' && (
         <>
-          <p className="error">Invalid or expired link.</p>
+          <p className="error">{t('activate.error')}</p>
           <div className="links" style={{ justifyContent: 'center', marginTop: 16 }}>
-            <button onClick={() => navigate('/auth/login')}>Go to login</button>
+            <button onClick={() => navigate('/auth/login')}>{t('activate.links.login')}</button>
           </div>
         </>
       )}

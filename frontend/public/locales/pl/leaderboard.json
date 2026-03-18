@@ -1,0 +1,11 @@
+{
+  "title": "Ranking",
+  "subtitle": "Śledź najlepszych graczy w każdym trybie rankingowym.",
+  "topPlayers": "Najlepsi gracze w wybranej kategorii",
+  "empty": "Brak danych rankingowych dla tej kategorii.",
+  "games": "Gry",
+  "winRate": "Procent zwycięstw",
+  "streak": "Seria",
+  "rating": "Rating",
+  "you": "Ty"
+}

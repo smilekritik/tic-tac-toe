@@ -7,5 +7,13 @@
   "TOKEN_INVALID": "Недійсне посилання",
   "SOMETHING_WRONG": "Щось пішло не так",
   "LOGIN_FAILED": "Помилка входу",
-  "REGISTRATION_FAILED": "Помилка реєстрації"
+  "REGISTRATION_FAILED": "Помилка реєстрації",
+  "USER_NOT_FOUND": "Користувача не знайдено",
+  "MATCH_NOT_FOUND": "Матч не знайдено",
+  "PROFILE_PRIVATE": "Цей профіль приватний",
+  "NO_FILE": "Файл не завантажено",
+  "INVALID_FILE_TYPE": "Дозволені лише зображення JPEG, PNG та WebP",
+  "ACTIVE_MATCH_EXISTS": "У вас уже є активний матч",
+  "RECONNECT_WINDOW_ACTIVE": "У вас уже є матч, який очікує повторного підключення",
+  "GAME_BANNED": "Вас тимчасово заблоковано в пошуку матчів"
 }

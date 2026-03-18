@@ -1,0 +1,14 @@
+{
+  "title": "Szczegóły meczu",
+  "subtitle": "Stan planszy, wynik i pełna lista ruchów.",
+  "backToHistory": "Wróć do historii",
+  "loading": "Ładowanie szczegółów meczu...",
+  "players": "Gracze",
+  "result": "Wynik",
+  "started": "Rozpoczęto",
+  "duration": "Czas trwania",
+  "ratingDelta": "Zmiana ratingu",
+  "winner": "Zwycięzca",
+  "draw": "Remis",
+  "moves": "Ruchy"
+}

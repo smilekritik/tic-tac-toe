@@ -11,7 +11,7 @@ i18n
     supportedLngs: ['en', 'uk', 'pl'],
     fallbackLng: 'en',
     defaultNS: 'common',
-    ns: ['common', 'auth', 'profile', 'errors'],
+    ns: ['common', 'auth', 'profile', 'errors', 'leaderboard', 'matchDetails', 'matches', 'game'],
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',
     },

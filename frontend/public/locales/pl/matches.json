@@ -1,0 +1,21 @@
+{
+  "title": "Historia meczów",
+  "loading": "Ładowanie historii meczów...",
+  "empty": "Brak rozegranych meczów.",
+  "opponent": "Przeciwnik",
+  "moves": "Ruchy",
+  "duration": "Czas trwania",
+  "ratingDelta": "Zmiana ratingu",
+  "finishReason": "Zakończenie",
+  "result": {
+    "win": "Wygrana",
+    "loss": "Przegrana",
+    "draw": "Remis"
+  },
+  "reason": {
+    "win": "Wygrana",
+    "draw": "Remis",
+    "timeout": "Limit czasu",
+    "abandon": "Rozłączenie"
+  }
+}

@@ -48,10 +48,10 @@ export default function ProfilePage() {
     try {
       if (me?.emailVerified) {
         await client.patch('/me/email', { email });
-        msg('email', 'Confirmation email sent');
+        msg('email', t('profile:emailChangeConfirmationSent'));
       } else {
         await client.post('/auth/resend-verification');
-        msg('email', 'Verification email sent');
+        msg('email', t('profile:verificationEmailSent'));
       }
     } catch (err) {
       const code = err.response?.data?.error?.code;
@@ -104,7 +104,7 @@ export default function ProfilePage() {
             <Avatar src={me?.profile?.avatarPath} size="min(64px, 8vh)" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <button onClick={() => fileRef.current.click()} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 'min(36px, 4.5vh)', padding: '0 16px', background: 'hsl(var(--muted))', borderRadius: 8, fontSize: 'min(14px, 1.8vh)', width: 'fit-content' }}>
-                <Upload size={14} /> Upload
+                <Upload size={14} /> {t('profile:upload')}
               </button>
               <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatar} />
               {messages.avatar && <p style={{ fontSize: 12, color: messages.avatar.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.avatar.text}</p>}
@@ -141,12 +141,12 @@ export default function ProfilePage() {
               }}
             />
             <button onClick={handleEmail} style={{ height: 'min(40px, 5vh)', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, width: 96, justifyContent: 'center', fontSize: 'min(14px, 1.8vh)' }}>
-              <Save size={14} /> {me?.emailVerified ? t('profile:save') : 'Resend'}
+              <Save size={14} /> {me?.emailVerified ? t('profile:save') : t('profile:resend')}
             </button>
           </div>
           {!me?.emailVerified && (
             <p style={{ fontSize: 12, marginTop: 4, color: '#f87171' }}>
-              Email not verified
+              {t('profile:emailNotVerified')}
             </p>
           )}
           {messages.email && <p style={{ fontSize: 12, marginTop: 4, color: messages.email.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.email.text}</p>}
@@ -174,12 +174,12 @@ export default function ProfilePage() {
             </div>
 
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 'min(40px, 5vh)' }}>
-              <span style={{ fontSize: 'min(14px, 1.8vh)' }}>Public profile</span>
+              <span style={{ fontSize: 'min(14px, 1.8vh)' }}>{t('profile:publicProfile')}</span>
               <input type="checkbox" checked={publicProfile} onChange={(e) => setPublicProfile(e.target.checked)} style={{ width: 16, height: 16 }} />
             </label>
 
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 'min(40px, 5vh)' }}>
-              <span style={{ fontSize: 'min(14px, 1.8vh)' }}>Chat enabled</span>
+              <span style={{ fontSize: 'min(14px, 1.8vh)' }}>{t('profile:chatEnabled')}</span>
               <input type="checkbox" checked={chatEnabled} onChange={(e) => setChatEnabled(e.target.checked)} style={{ width: 16, height: 16 }} />
             </label>
 

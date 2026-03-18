@@ -1,0 +1,17 @@
+{
+  "result": {
+    "draw": "Remis!",
+    "opponentDisconnectedWin": "Przeciwnik się rozłączył. Wygrywasz!",
+    "disconnectLoss": "Przegrywasz przez rozłączenie.",
+    "timeoutWin": "Przeciwnikowi skończył się czas. Wygrywasz!",
+    "timeoutLoss": "Czas minął. Przegrywasz.",
+    "win": "Wygrywasz!",
+    "lose": "Przegrywasz!"
+  },
+  "status": {
+    "yourTurn": "Twój ruch",
+    "waitingForOpponent": "Oczekiwanie na przeciwnika...",
+    "opponentThinking": "Przeciwnik się zastanawia..."
+  },
+  "backToLobby": "Powrót do lobby"
+}

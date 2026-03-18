@@ -1,0 +1,17 @@
+{
+  "result": {
+    "draw": "Draw!",
+    "opponentDisconnectedWin": "Opponent disconnected. You win!",
+    "disconnectLoss": "You lost by disconnect.",
+    "timeoutWin": "Opponent ran out of time. You win!",
+    "timeoutLoss": "Time is over. You lose.",
+    "win": "You win!",
+    "lose": "You lose!"
+  },
+  "status": {
+    "yourTurn": "Your turn",
+    "waitingForOpponent": "Waiting for opponent...",
+    "opponentThinking": "Opponent is thinking..."
+  },
+  "backToLobby": "Back to lobby"
+}

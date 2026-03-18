@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import Board from '../components/game/Board';
 import OIcon from '../components/game/OIcon';
@@ -117,6 +118,7 @@ function PlayerBar({
 export default function GamePage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation(['game', 'errors']);
   const socket = useSocketStore((s) => s.socket);
   const user = useAuthStore((s) => s.user);
 
@@ -228,21 +230,21 @@ export default function GamePage() {
 
   const getResultText = () => {
     if (!gameResult) return null;
-    if (gameResult.reason === 'draw') return 'Draw!';
+    if (gameResult.reason === 'draw') return t('game:result.draw');
 
     if (gameResult.reason === 'abandon') {
       return gameResult.winnerId === user?.id
-        ? 'Opponent disconnected. You win!'
-        : 'You lost by disconnect.';
+        ? t('game:result.opponentDisconnectedWin')
+        : t('game:result.disconnectLoss');
     }
 
     if (gameResult.reason === 'timeout') {
       return gameResult.winnerId === user?.id
-        ? 'Opponent ran out of time. You win!'
-        : 'Time is over. You lose.';
+        ? t('game:result.timeoutWin')
+        : t('game:result.timeoutLoss');
     }
 
-    return gameResult.winnerId === user?.id ? 'You win! 🎉' : 'You lose!';
+    return gameResult.winnerId === user?.id ? t('game:result.win') : t('game:result.lose');
   };
 
   const getResultColor = () => {
@@ -338,15 +340,15 @@ export default function GamePage() {
               transition: 'background-color 0.25s ease',
             }}
           >
-            ● Your turn
+            {t('game:status.yourTurn')}
           </div>
         ) : !turnDeadlineAt ? (
           <span style={{ color: 'hsl(var(--muted-foreground))', fontSize: 14 }}>
-            Waiting for opponent...
+            {t('game:status.waitingForOpponent')}
           </span>
         ) : (
           <span style={{ color: 'hsl(var(--muted-foreground))', fontSize: 14 }}>
-            Opponent is thinking...
+            {t('game:status.opponentThinking')}
           </span>
         )}
       </div>
@@ -363,11 +365,15 @@ export default function GamePage() {
 
       {gameResult && (
         <button onClick={() => navigate('/dashboard')} style={{ width: boardSize }}>
-          Back to lobby
+          {t('game:backToLobby')}
         </button>
       )}
 
-      {error && <p style={{ color: '#f87171', fontSize: 14 }}>{error}</p>}
+      {error && (
+        <p style={{ color: '#f87171', fontSize: 14 }}>
+          {t(`errors:${error}`, { defaultValue: error })}
+        </p>
+      )}
     </div>
   );
 }
