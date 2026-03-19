@@ -14,6 +14,8 @@ function createMatch(matchId, playerX, playerO) {
     disconnectedPlayers: new Set(),
     reconnectTimers: {},
     reconnectDeadlines: {},
+    chatMessages: [],
+    chatLastSentAt: {},
   });
   userActiveMatch.set(playerX.userId, matchId);
   userActiveMatch.set(playerO.userId, matchId);

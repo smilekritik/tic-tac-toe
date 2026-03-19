@@ -13,5 +13,14 @@
     "waitingForOpponent": "Oczekiwanie na przeciwnika...",
     "opponentThinking": "Przeciwnik się zastanawia..."
   },
-  "backToLobby": "Powrót do lobby"
+  "backToLobby": "Powrót do lobby",
+  "chat": {
+    "title": "Czat meczu",
+    "show": "Pokaż",
+    "hide": "Ukryj",
+    "empty": "Brak wiadomości.",
+    "placeholder": "Napisz wiadomość...",
+    "disabledAfterMatch": "Po zakończeniu meczu czat jest niedostępny",
+    "you": "Ty"
+  }
 }

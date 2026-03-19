@@ -11,6 +11,7 @@
   "USER_NOT_FOUND": "Nie znaleziono użytkownika",
   "MATCH_NOT_FOUND": "Nie znaleziono meczu",
   "PROFILE_PRIVATE": "Ten profil jest prywatny",
+  "CHAT_RATE_LIMIT": "Wysyłasz wiadomości zbyt szybko",
   "NO_FILE": "Nie przesłano pliku",
   "INVALID_FILE_TYPE": "Dozwolone są tylko obrazy JPEG, PNG i WebP",
   "ACTIVE_MATCH_EXISTS": "Masz już aktywny mecz",

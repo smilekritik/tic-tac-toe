@@ -13,5 +13,14 @@
     "waitingForOpponent": "Waiting for opponent...",
     "opponentThinking": "Opponent is thinking..."
   },
-  "backToLobby": "Back to lobby"
+  "backToLobby": "Back to lobby",
+  "chat": {
+    "title": "Match chat",
+    "show": "Show",
+    "hide": "Hide",
+    "empty": "No messages yet.",
+    "placeholder": "Type a message...",
+    "disabledAfterMatch": "Chat is unavailable after the match ends",
+    "you": "You"
+  }
 }

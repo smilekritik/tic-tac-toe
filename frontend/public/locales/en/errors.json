@@ -11,6 +11,7 @@
   "USER_NOT_FOUND": "User not found",
   "MATCH_NOT_FOUND": "Match not found",
   "PROFILE_PRIVATE": "This profile is private",
+  "CHAT_RATE_LIMIT": "You're sending messages too quickly",
   "NO_FILE": "No file uploaded",
   "INVALID_FILE_TYPE": "Only JPEG, PNG and WebP images are allowed",
   "ACTIVE_MATCH_EXISTS": "You already have an active match",

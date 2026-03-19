@@ -2,10 +2,10 @@ const gameStateService = require('./game.state');
 const { createEngine } = require('./engine/game.engine');
 const classicMode = require('./engine/classic.mode');
 const prisma = require('../../lib/prisma');
+const { sanitizeChatText } = require('./chat.sanitizer');
+const { TURN_TIMEOUT_MS, ELO_K_FACTOR, CHAT_RATE_LIMIT_MS } = require('./game.constants');
 
 const engine = createEngine(classicMode);
-const TURN_TIMEOUT_MS = 30000;
-const ELO_K_FACTOR = 32;
 
 function emitMatchState(io, matchId, match) {
   io.to(`match:${matchId}`).emit('game:state', {
@@ -32,6 +32,12 @@ function emitTimerUpdate(target, matchId, match) {
   const payload = buildTimerPayload(matchId, match);
   if (!payload) return;
   target.emit('game:timer-update', payload);
+}
+
+function emitChatHistory(target, match) {
+  target.emit('game:chat-history', {
+    messages: match.chatMessages || [],
+  });
 }
 
 function getMatchScores(match, winnerId, reason) {
@@ -316,6 +322,7 @@ function registerGameHandlers(socket, io) {
     const updatedMatch = gameStateService.getMatch(matchId);
     if (!updatedMatch?.gameState) return;
 
+    emitChatHistory(socket, updatedMatch);
     emitMatchState(io, matchId, updatedMatch);
     emitTimerUpdate(socket, matchId, updatedMatch);
   });
@@ -368,6 +375,43 @@ function registerGameHandlers(socket, io) {
     const updatedMatch = gameStateService.getMatch(matchId);
     emitMatchState(io, matchId, updatedMatch);
     emitTimerUpdate(io.to(`match:${matchId}`), matchId, updatedMatch);
+  });
+
+  socket.on('game:chat-send', ({ matchId, text }) => {
+    const match = gameStateService.getMatch(matchId);
+    if (!match) return socket.emit('game:error', { code: 'MATCH_NOT_FOUND' });
+
+    const isPlayer = match.playerX.userId === userId || match.playerO.userId === userId;
+    if (!isPlayer) return socket.emit('game:error', { code: 'NOT_A_PLAYER' });
+
+    const normalizedText = sanitizeChatText(text);
+    if (!normalizedText) return;
+
+    const lastSentAt = match.chatLastSentAt?.[userId] || 0;
+    if (Date.now() - lastSentAt < CHAT_RATE_LIMIT_MS) {
+      return socket.emit('game:error', { code: 'CHAT_RATE_LIMIT' });
+    }
+
+    const message = {
+      id: `${Date.now()}-${userId}`,
+      userId,
+      username: socket.user.username,
+      text: normalizedText,
+      createdAt: new Date().toISOString(),
+    };
+
+    const chatMessages = [...(match.chatMessages || []), message].slice(-50);
+    const chatLastSentAt = {
+      ...(match.chatLastSentAt || {}),
+      [userId]: Date.now(),
+    };
+
+    gameStateService.updateMatch(matchId, {
+      chatMessages,
+      chatLastSentAt,
+    });
+
+    io.to(`match:${matchId}`).emit('game:chat-message', message);
   });
 
   socket.on('disconnect', () => {

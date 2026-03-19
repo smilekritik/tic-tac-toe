@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
+import { EyeOff, MessageSquare, Send } from 'lucide-react';
 import Board from '../components/game/Board';
 import OIcon from '../components/game/OIcon';
 import XIcon from '../components/game/XIcon';
@@ -133,7 +134,14 @@ export default function GamePage() {
   const [turnDeadlineAt, setTurnDeadlineAt] = useState(null);
   const [timeLeft, setTimeLeft] = useState(30);
   const [error, setError] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatVisible, setChatVisible] = useState(true);
+  const [wideLayout, setWideLayout] = useState(() => (
+    typeof window !== 'undefined' ? window.innerWidth >= 1100 : false
+  ));
   const timerRef = useRef(null);
+  const chatScrollRef = useRef(null);
 
   const mySymbol = sessionStorage.getItem(`match:${matchId}:symbol`);
   const opponentSymbol = mySymbol === 'X' ? 'O' : 'X';
@@ -143,6 +151,37 @@ export default function GamePage() {
   const myAvatar = mySymbol === 'X' ? avatarX : avatarO;
   const opponentAvatar = mySymbol === 'X' ? avatarO : avatarX;
   const isMyTurn = mySymbol === currentSymbol && !gameResult && Boolean(turnDeadlineAt);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    client.get('/me')
+      .then(({ data }) => {
+        if (!cancelled) {
+          setChatVisible(data.profile?.chatEnabledDefault ?? true);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleResize = () => {
+      setWideLayout(window.innerWidth >= 1100);
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     if (!socket) return undefined;
@@ -184,21 +223,38 @@ export default function GamePage() {
       setTimeLeft(0);
     };
 
+    const handleChatHistory = ({ messages }) => {
+      setChatMessages(messages || []);
+    };
+
+    const handleChatMessage = (message) => {
+      setChatMessages((prev) => [...prev, message]);
+    };
+
     const handleError = ({ code }) => setError(code);
 
     socket.emit('game:join', { matchId });
     socket.on('game:state', handleState);
     socket.on('game:timer-update', handleTimerUpdate);
     socket.on('game:ended', handleEnded);
+    socket.on('game:chat-history', handleChatHistory);
+    socket.on('game:chat-message', handleChatMessage);
     socket.on('game:error', handleError);
 
     return () => {
       socket.off('game:state', handleState);
       socket.off('game:timer-update', handleTimerUpdate);
       socket.off('game:ended', handleEnded);
+      socket.off('game:chat-history', handleChatHistory);
+      socket.off('game:chat-message', handleChatMessage);
       socket.off('game:error', handleError);
     };
   }, [socket, matchId]);
+
+  useEffect(() => {
+    if (!chatScrollRef.current) return;
+    chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+  }, [chatMessages]);
 
   useEffect(() => {
     if (timerRef.current) {
@@ -226,6 +282,14 @@ export default function GamePage() {
   const handleMove = (position) => {
     if (!socket || !mySymbol) return;
     socket.emit('game:move', { matchId, position });
+  };
+
+  const handleSendChat = () => {
+    const message = chatInput.trim();
+    if (!socket || !message || gameResult) return;
+
+    socket.emit('game:chat-send', { matchId, text: message });
+    setChatInput('');
   };
 
   const getResultText = () => {
@@ -261,16 +325,149 @@ export default function GamePage() {
 
   const avatarSize = 40;
   const boardSize = 'min(306px, 80vw)';
+  const chatPanelWidth = 320;
+  const wideChatOffset = 156;
 
-  return (
+  const chatPanel = (
     <div
       style={{
-        minHeight: '100%',
+        width: wideLayout ? chatPanelWidth : boardSize,
+        maxWidth: '100%',
+        background: 'hsl(var(--card))',
+        border: '1px solid hsl(var(--border))',
+        borderRadius: 12,
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          padding: '10px 12px',
+          borderBottom: chatVisible ? '1px solid hsl(var(--border))' : 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600 }}>
+          <MessageSquare size={16} />
+          <span>{t('game:chat.title')}</span>
+        </div>
+        <button
+          onClick={() => setChatVisible((prev) => !prev)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '4px 10px',
+            borderRadius: 8,
+            background: 'hsl(var(--muted))',
+            fontSize: 12,
+          }}
+        >
+          <EyeOff size={14} />
+          {chatVisible ? t('game:chat.hide') : t('game:chat.show')}
+        </button>
+      </div>
+
+      {chatVisible && (
+        <>
+          <div
+            ref={chatScrollRef}
+            style={{
+              height: wideLayout ? 360 : 180,
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              padding: 12,
+            }}
+          >
+            {chatMessages.length === 0 ? (
+              <div style={{ color: 'hsl(var(--muted-foreground))', fontSize: 13 }}>
+                {t('game:chat.empty')}
+              </div>
+            ) : (
+              chatMessages.map((message) => (
+                <div
+                  key={message.id}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: 10,
+                    background: message.userId === user?.id ? 'rgba(74,222,128,0.08)' : 'hsl(var(--muted))',
+                    border: message.userId === user?.id ? '1px solid rgba(74,222,128,0.2)' : '1px solid transparent',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                    <strong style={{ fontSize: 12 }}>
+                      {message.userId === user?.id ? t('game:chat.you') : `@${message.username}`}
+                    </strong>
+                    <span style={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}>
+                      {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      lineHeight: 1.4,
+                      whiteSpace: 'pre-wrap',
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {message.text}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderTop: '1px solid hsl(var(--border))' }}>
+            <input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSendChat();
+                }
+              }}
+              maxLength={250}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              disabled={!!gameResult}
+              placeholder={gameResult ? t('game:chat.disabledAfterMatch') : t('game:chat.placeholder')}
+              style={{ flex: 1, height: 40, fontSize: 13 }}
+            />
+            <button
+              onClick={handleSendChat}
+              disabled={!chatInput.trim() || !!gameResult}
+              style={{
+                width: 40,
+                height: 40,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: !chatInput.trim() || gameResult ? 0.5 : 1,
+              }}
+            >
+              <Send size={16} />
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const gameColumn = (
+    <div
+      style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px',
         gap: 20,
       }}
     >
@@ -363,14 +560,50 @@ export default function GamePage() {
         size={boardSize}
       />
 
+      {!wideLayout && chatPanel}
+
       {gameResult && (
         <button onClick={() => navigate('/dashboard')} style={{ width: boardSize }}>
           {t('game:backToLobby')}
         </button>
       )}
+    </div>
+  );
+
+  return (
+    <div
+      style={{
+        minHeight: '100%',
+        display: 'flex',
+        justifyContent: 'center',
+        padding: '24px',
+        width: '100%',
+      }}
+    >
+      {wideLayout ? (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `${chatPanelWidth}px auto ${chatPanelWidth}px`,
+            columnGap: 24,
+            alignItems: 'start',
+            width: 'min(1040px, 100%)',
+          }}
+        >
+          <div />
+          {gameColumn}
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: wideChatOffset }}>
+            {chatPanel}
+          </div>
+        </div>
+      ) : (
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+          {gameColumn}
+        </div>
+      )}
 
       {error && (
-        <p style={{ color: '#f87171', fontSize: 14 }}>
+        <p style={{ color: '#f87171', fontSize: 14, position: 'fixed', bottom: 16, left: '50%', transform: 'translateX(-50%)' }}>
           {t(`errors:${error}`, { defaultValue: error })}
         </p>
       )}
