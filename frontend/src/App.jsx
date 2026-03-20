@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useSocket } from './hooks/useSocket';
+import AuthBootstrap from './router/AuthBootstrap';
+import GuestRoute from './router/GuestRoute';
 import ProtectedRoute from './router/ProtectedRoute';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -23,62 +25,100 @@ function SocketInitializer() {
 export default function App() {
   return (
     <BrowserRouter>
-      <SocketInitializer />
-      <div className="app-shell">
-        <main className="app-main">
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/auth/login" element={<LoginPage />} />
-            <Route path="/auth/register" element={<RegisterPage />} />
-            <Route
-              path="/auth/forgot-password"
-              element={<ForgotPasswordPage />}
-            />
-            <Route
-              path="/auth/reset-password"
-              element={<ResetPasswordPage />}
-            />
-            <Route path="/auth/activate/:token" element={<ActivatePage />} />
-            <Route path="/u/:username" element={<PublicProfilePage />} />
-            <Route path="/matches/:matchId" element={<MatchDetailsPage />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/profile" element={<Navigate to="/settings" replace />} />
-            <Route
-              path="/leaderboard"
-              element={
-                <ProtectedRoute>
-                  <LeaderboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/game/:matchId"
-              element={
-                <ProtectedRoute>
-                  <GamePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
+      <AuthBootstrap>
+        <SocketInitializer />
+        <div className="app-shell">
+          <main className="app-main">
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <GuestRoute>
+                    <LandingPage />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/auth/login"
+                element={
+                  <GuestRoute>
+                    <LoginPage />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/auth/register"
+                element={
+                  <GuestRoute>
+                    <RegisterPage />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/auth/forgot-password"
+                element={
+                  <GuestRoute>
+                    <ForgotPasswordPage />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/auth/reset-password"
+                element={
+                  <GuestRoute>
+                    <ResetPasswordPage />
+                  </GuestRoute>
+                }
+              />
+              <Route
+                path="/auth/activate/:token"
+                element={
+                  <GuestRoute>
+                    <ActivatePage />
+                  </GuestRoute>
+                }
+              />
+              <Route path="/u/:username" element={<PublicProfilePage />} />
+              <Route path="/matches/:matchId" element={<MatchDetailsPage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/profile" element={<Navigate to="/settings" replace />} />
+              <Route
+                path="/leaderboard"
+                element={
+                  <ProtectedRoute>
+                    <LeaderboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/game/:matchId"
+                element={
+                  <ProtectedRoute>
+                    <GamePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+      </AuthBootstrap>
     </BrowserRouter>
   );
 }
