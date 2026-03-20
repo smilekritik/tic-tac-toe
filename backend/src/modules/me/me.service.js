@@ -74,7 +74,10 @@ async function getMe(userId) {
       },
     }),
     prisma.gameMode.findMany({
-      where: { isEnabled: true },
+      where: {
+        isEnabled: true,
+        isRanked: true,
+      },
       select: {
         code: true,
         name: true,

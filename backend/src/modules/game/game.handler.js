@@ -1,21 +1,35 @@
 const gameStateService = require('./game.state');
 const { createEngine } = require('./engine/game.engine');
-const classicMode = require('./engine/classic.mode');
+const { getModeModule } = require('./engine/game-modes');
 const prisma = require('../../lib/prisma');
 const { sanitizeChatText } = require('./chat.sanitizer');
 const { TURN_TIMEOUT_MS, ELO_K_FACTOR, CHAT_RATE_LIMIT_MS } = require('./game.constants');
 
-const engine = createEngine(classicMode);
+function getMatchEngine(match) {
+  return createEngine(getModeModule(match?.gameMode?.code));
+}
 
-function emitMatchState(io, matchId, match) {
-  io.to(`match:${matchId}`).emit('game:state', {
-    board: match.gameState.board,
-    currentSymbol: match.gameState.currentSymbol,
-    moveCount: match.gameState.moveCount,
+function serializeMatchState(match) {
+  const engine = getMatchEngine(match);
+  const serializedState = engine.serialize(match.gameState);
+
+  return {
+    ...serializedState,
     playerX: match.playerX.username,
     playerO: match.playerO.username,
     turnDeadlineAt: match.turnDeadlineAt,
-  });
+    nextRemovalPosition: serializedState.nextRemovalPosition ?? null,
+    gameMode: match.gameMode
+      ? {
+        code: match.gameMode.code,
+        name: match.gameMode.name,
+      }
+      : null,
+  };
+}
+
+function emitMatchState(io, matchId, match) {
+  io.to(`match:${matchId}`).emit('game:state', serializeMatchState(match));
 }
 
 function buildTimerPayload(matchId, match) {
@@ -230,7 +244,7 @@ async function maybeStartMatch(io, matchId) {
   });
 
   gameStateService.updateMatch(matchId, {
-    gameState: engine.init(),
+    gameState: getMatchEngine(match).init(),
     startedAt,
   });
 
@@ -337,6 +351,8 @@ function registerGameHandlers(socket, io) {
     if (!isX && !isO) return socket.emit('game:error', { code: 'NOT_A_PLAYER' });
 
     const playerSymbol = isX ? 'X' : 'O';
+    const engine = getMatchEngine(match);
+
     if (match.gameState.currentSymbol !== playerSymbol) {
       return socket.emit('game:error', { code: 'NOT_YOUR_TURN' });
     }
@@ -353,11 +369,11 @@ function registerGameHandlers(socket, io) {
       const winnerId = winResult.winner === 'X' ? match.playerX.userId : match.playerO.userId;
       clearTurnTimer(matchId);
       io.to(`match:${matchId}`).emit('game:state', {
-        board: newState.board,
-        currentSymbol: newState.currentSymbol,
-        moveCount: newState.moveCount,
-        playerX: match.playerX.username,
-        playerO: match.playerO.username,
+        ...serializeMatchState({
+          ...match,
+          gameState: newState,
+          turnDeadlineAt: null,
+        }),
         turnDeadlineAt: null,
         winLine: winResult.line,
       });

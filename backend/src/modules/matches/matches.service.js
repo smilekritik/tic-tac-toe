@@ -1,5 +1,6 @@
 const prisma = require('../../lib/prisma');
-const classicMode = require('../game/engine/classic.mode');
+const { createEngine } = require('../game/engine/game.engine');
+const { getModeModule } = require('../game/engine/game-modes');
 
 function createError(code, status) {
   const err = new Error(code);
@@ -144,15 +145,21 @@ async function getPublicMatchHistory(username, query = {}) {
   return getMatchHistoryByUserId(user.id, query);
 }
 
-function buildBoardFromMoves(moves) {
-  const board = Array(9).fill(null);
+function buildStateFromMoves(modeCode, moves) {
+  const engine = createEngine(getModeModule(modeCode));
+  let state = engine.init();
 
   for (const move of moves) {
     const position = move.positionX * 3 + move.positionY;
-    board[position] = move.symbol;
+    state = engine.applyMove(state, position, move.symbol);
   }
 
-  return board;
+  const serializedState = engine.serialize(state);
+
+  return {
+    board: serializedState.board,
+    winResult: engine.checkWinner(serializedState.board),
+  };
 }
 
 async function getMatchDetails(matchId, viewerUserId = null) {
@@ -231,8 +238,7 @@ async function getMatchDetails(matchId, viewerUserId = null) {
     throw createError('PROFILE_PRIVATE', 403);
   }
 
-  const board = buildBoardFromMoves(match.moves);
-  const winResult = classicMode.checkWinner(board);
+  const finalState = buildStateFromMoves(match.gameMode.code, match.moves);
 
   return {
     id: match.id,
@@ -258,9 +264,9 @@ async function getMatchDetails(matchId, viewerUserId = null) {
     winner: match.winner ? { username: match.winner.username } : null,
     moves: match.moves,
     finalState: {
-      board,
+      board: finalState.board,
     },
-    winLine: winResult?.line || null,
+    winLine: finalState.winResult?.line || null,
   };
 }
 

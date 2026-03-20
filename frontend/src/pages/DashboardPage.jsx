@@ -7,6 +7,19 @@ import { useSocketStore } from '../store/socket.store';
 import Layout from '../components/Layout';
 import client from '../api/client';
 
+const GAME_MODES = [
+  {
+    code: 'classic',
+    titleKey: 'auth:dashboard.modes.classic.title',
+    descriptionKey: 'auth:dashboard.modes.classic.description',
+  },
+  {
+    code: 'moving-window',
+    titleKey: 'auth:dashboard.modes.movingWindow.title',
+    descriptionKey: 'auth:dashboard.modes.movingWindow.description',
+  },
+];
+
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const connected = useSocketStore((s) => s.connected);
@@ -17,6 +30,7 @@ export default function DashboardPage() {
   const [activeMatchId, setActiveMatchId] = useState(null);
   const [matchmakingDisabled, setMatchmakingDisabled] = useState(false);
   const [matchmakingError, setMatchmakingError] = useState(null);
+  const [selectedModeCode, setSelectedModeCode] = useState(() => localStorage.getItem('selectedGameMode') || 'classic');
 
   // Check for active match on mount
   useEffect(() => {
@@ -67,11 +81,18 @@ export default function DashboardPage() {
 
   const handleFindGame = () => {
     if (!socket) return;
-    socket.emit(inQueue ? 'matchmaking:leave' : 'matchmaking:join');
+    socket.emit(inQueue ? 'matchmaking:leave' : 'matchmaking:join', { modeCode: selectedModeCode });
   };
 
   const handleReconnect = () => {
     navigate(`/game/${activeMatchId}`);
+  };
+
+  const handleModeSelect = (modeCode) => {
+    if (inQueue || activeMatchId) return;
+    setSelectedModeCode(modeCode);
+    localStorage.setItem('selectedGameMode', modeCode);
+    setMatchmakingError(null);
   };
 
   return (
@@ -93,7 +114,38 @@ export default function DashboardPage() {
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           gap: 'min(24px, 3vh)',
         }}>
-          <h2 style={{ fontSize: 'min(20px, 2.5vh)', fontWeight: 600 }}>Classic 3×3</h2>
+          <div style={{ width: '100%', display: 'grid', gap: 12 }}>
+            {GAME_MODES.map((mode) => {
+              const isSelected = selectedModeCode === mode.code;
+
+              return (
+                <button
+                  key={mode.code}
+                  type="button"
+                  onClick={() => handleModeSelect(mode.code)}
+                  disabled={inQueue || !!activeMatchId}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '14px 16px',
+                    borderRadius: 14,
+                    border: isSelected ? '1px solid hsl(var(--primary))' : '1px solid hsl(var(--border))',
+                    background: isSelected ? 'rgba(129, 140, 248, 0.16)' : 'hsl(var(--muted))',
+                    color: 'hsl(var(--foreground))',
+                    opacity: inQueue || activeMatchId ? 0.75 : 1,
+                    cursor: inQueue || activeMatchId ? 'default' : 'pointer',
+                  }}
+                >
+                  <div style={{ fontSize: 'min(18px, 2.2vh)', fontWeight: 700 }}>
+                    {t(mode.titleKey)}
+                  </div>
+                  <div style={{ marginTop: 6, color: 'hsl(var(--muted-foreground))', fontSize: 'min(14px, 1.8vh)' }}>
+                    {t(mode.descriptionKey)}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
           {activeMatchId ? (
             <button
@@ -112,7 +164,7 @@ export default function DashboardPage() {
                 animation: 'pulse 2s infinite',
               }}
             >
-              <Wifi size={18} /> Reconnect to active game
+              <Wifi size={18} /> {t('auth:dashboard.reconnect')}
             </button>
           ) : (
             <button
@@ -133,7 +185,9 @@ export default function DashboardPage() {
                 transition: 'opacity 0.2s',
               }}
             >
-              {inQueue ? <><X size={18} /> Cancel</> : <><Search size={18} /> Find Game</>}
+              {inQueue
+                ? <><X size={18} /> {t('auth:dashboard.actions.cancel')}</>
+                : <><Search size={18} /> {t('auth:dashboard.actions.findGame')}</>}
             </button>
           )}
 
@@ -146,7 +200,7 @@ export default function DashboardPage() {
           {inQueue && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'hsl(var(--muted-foreground))', fontSize: 'min(14px, 1.8vh)' }}>
               <div className="animate-pulse" style={{ width: 8, height: 8, borderRadius: '50%', background: 'hsl(var(--primary))' }} />
-              Searching for opponent...
+              {t('auth:dashboard.searching', { mode: t(GAME_MODES.find((mode) => mode.code === selectedModeCode)?.titleKey || 'auth:dashboard.modes.classic.title') })}
             </div>
           )}
         </div>

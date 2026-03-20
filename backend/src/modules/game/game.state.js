@@ -1,11 +1,12 @@
 const matches = new Map();
 const userActiveMatch = new Map(); // userId -> matchId
 
-function createMatch(matchId, playerX, playerO) {
+function createMatch(matchId, playerX, playerO, gameMode) {
   matches.set(matchId, {
     matchId,
     playerX,
     playerO,
+    gameMode,
     gameState: null,
     startedAt: null,
     timer: null,

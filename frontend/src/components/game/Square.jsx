@@ -1,10 +1,9 @@
-import XIcon from './XIcon';
-import OIcon from './OIcon';
 import { cn } from '../../lib/utils';
 
-export default function Square({ value, onClick, isClickable, isWinning }) {
+export default function Square({ value, onClick, isClickable, isWinning, isRemovalPreview }) {
   return (
     <button
+      className={cn(isRemovalPreview && 'square-removal-preview')}
       onClick={onClick}
       disabled={!isClickable}
       style={{
@@ -25,13 +24,21 @@ export default function Square({ value, onClick, isClickable, isWinning }) {
       onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isWinning ? '#bbf7d0' : '#f5f5f5'; }}
     >
       {value === 'X' && (
-        <svg viewBox="0 0 100 100" style={{ position: 'absolute', width: '60%', height: '60%' }}>
+        <svg
+          viewBox="0 0 100 100"
+          className={cn(isRemovalPreview && 'square-removal-preview-mark')}
+          style={{ position: 'absolute', width: '60%', height: '60%' }}
+        >
           <line x1="15" y1="15" x2="85" y2="85" stroke="#ef4444" strokeWidth="12" strokeLinecap="round" />
           <line x1="85" y1="15" x2="15" y2="85" stroke="#ef4444" strokeWidth="12" strokeLinecap="round" />
         </svg>
       )}
       {value === 'O' && (
-        <svg viewBox="0 0 100 100" style={{ position: 'absolute', width: '60%', height: '60%' }}>
+        <svg
+          viewBox="0 0 100 100"
+          className={cn(isRemovalPreview && 'square-removal-preview-mark')}
+          style={{ position: 'absolute', width: '60%', height: '60%' }}
+        >
           <circle cx="50" cy="50" r="38" stroke="#3b82f6" strokeWidth="12" fill="none" />
         </svg>
       )}

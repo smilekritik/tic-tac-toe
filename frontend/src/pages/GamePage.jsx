@@ -125,6 +125,8 @@ export default function GamePage() {
 
   const [board, setBoard] = useState(Array(9).fill(null));
   const [currentSymbol, setCurrentSymbol] = useState('X');
+  const [gameMode, setGameMode] = useState(null);
+  const [nextRemovalPosition, setNextRemovalPosition] = useState(null);
   const [playerX, setPlayerX] = useState('');
   const [playerO, setPlayerO] = useState('');
   const [avatarX, setAvatarX] = useState(null);
@@ -204,6 +206,8 @@ export default function GamePage() {
     const handleState = (state) => {
       setBoard(state.board);
       setCurrentSymbol(state.currentSymbol);
+      setGameMode(state.gameMode ?? null);
+      setNextRemovalPosition(state.nextRemovalPosition ?? null);
       setTurnDeadlineAt(state.turnDeadlineAt ?? null);
       setTimeLeft(getRemainingSeconds(state.turnDeadlineAt ?? null));
       setWinLine(state.winLine || null);
@@ -550,6 +554,23 @@ export default function GamePage() {
         )}
       </div>
 
+      {gameMode?.name && (
+        <div
+          style={{
+            width: boardSize,
+            marginTop: -10,
+            textAlign: 'center',
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'hsl(var(--muted-foreground))',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+          }}
+        >
+          {gameMode.name}
+        </div>
+      )}
+
       <Board
         squares={board}
         onMove={handleMove}
@@ -557,6 +578,7 @@ export default function GamePage() {
         mySymbol={mySymbol}
         winLine={winLine}
         gameEnded={!!gameResult}
+        previewRemovalPosition={nextRemovalPosition}
         size={boardSize}
       />
 

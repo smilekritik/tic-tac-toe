@@ -24,6 +24,17 @@ async function main() {
     },
   });
 
+  await prisma.gameMode.upsert({
+    where: { code: 'moving-window' },
+    update: {},
+    create: {
+      code: 'moving-window',
+      name: 'Moving Window',
+      isRanked: true,
+      isEnabled: true,
+    },
+  });
+
   console.log('[seed] game modes created');
 }
 

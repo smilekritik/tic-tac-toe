@@ -14,6 +14,7 @@
   "CHAT_RATE_LIMIT": "You're sending messages too quickly",
   "NO_FILE": "No file uploaded",
   "INVALID_FILE_TYPE": "Only JPEG, PNG and WebP images are allowed",
+  "INVALID_GAME_MODE": "This game mode is unavailable",
   "ACTIVE_MATCH_EXISTS": "You already have an active match",
   "RECONNECT_WINDOW_ACTIVE": "You already have a match waiting for reconnect",
   "GAME_BANNED": "You are temporarily banned from matchmaking"

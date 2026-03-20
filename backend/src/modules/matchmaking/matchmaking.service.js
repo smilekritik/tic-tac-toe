@@ -2,8 +2,14 @@ const prisma = require('../../lib/prisma');
 
 const queue = new Map();
 
-function addToQueue(userId, username, socketId) {
-  queue.set(userId, { userId, username, socketId, joinedAt: Date.now() });
+function addToQueue(userId, username, socketId, gameMode) {
+  queue.set(userId, {
+    userId,
+    username,
+    socketId,
+    gameMode,
+    joinedAt: Date.now(),
+  });
 }
 
 function removeFromQueue(userId) {
@@ -15,22 +21,22 @@ function isInQueue(userId) {
 }
 
 async function tryMatch(currentUserId) {
+  const currentPlayer = queue.get(currentUserId);
+  if (!currentPlayer) return null;
+
   for (const [candidateId, candidate] of queue.entries()) {
     if (candidateId === currentUserId) continue;
+    if (candidate.gameMode?.code !== currentPlayer.gameMode?.code) continue;
 
-    const player1 = queue.get(currentUserId);
+    const player1 = currentPlayer;
     const player2 = candidate;
 
     removeFromQueue(currentUserId);
     removeFromQueue(candidateId);
 
-    const gameMode = await prisma.gameMode.findUnique({
-      where: { code: 'classic' },
-    });
-
     const match = await prisma.match.create({
       data: {
-        gameModeId: gameMode.id,
+        gameModeId: player1.gameMode.id,
         matchType: 'ranked',
         playerXId: player1.userId,
         playerOId: player2.userId,
@@ -38,7 +44,7 @@ async function tryMatch(currentUserId) {
       },
     });
 
-    return { match, player1, player2 };
+    return { match, player1, player2, gameMode: player1.gameMode };
   }
 
   return null;

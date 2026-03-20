@@ -1,6 +1,15 @@
 import Square from './Square';
 
-export default function Board({ squares, onMove, currentSymbol, mySymbol, winLine, gameEnded, size = 'min(60vh, 80vw)' }) {
+export default function Board({
+  squares,
+  onMove,
+  currentSymbol,
+  mySymbol,
+  winLine,
+  gameEnded,
+  previewRemovalPosition,
+  size = 'min(60vh, 80vw)',
+}) {
   return (
     <div style={{
       display: 'grid',
@@ -19,6 +28,7 @@ export default function Board({ squares, onMove, currentSymbol, mySymbol, winLin
           value={value}
           isClickable={!gameEnded && !value && currentSymbol === mySymbol}
           isWinning={winLine?.includes(i)}
+          isRemovalPreview={!gameEnded && previewRemovalPosition === i}
           onClick={() => onMove(i)}
         />
       ))}

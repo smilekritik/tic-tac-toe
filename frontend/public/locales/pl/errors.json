@@ -14,6 +14,7 @@
   "CHAT_RATE_LIMIT": "Wysyłasz wiadomości zbyt szybko",
   "NO_FILE": "Nie przesłano pliku",
   "INVALID_FILE_TYPE": "Dozwolone są tylko obrazy JPEG, PNG i WebP",
+  "INVALID_GAME_MODE": "Ten tryb gry jest niedostępny",
   "ACTIVE_MATCH_EXISTS": "Masz już aktywny mecz",
   "RECONNECT_WINDOW_ACTIVE": "Masz już mecz oczekujący na ponowne połączenie",
   "GAME_BANNED": "Tymczasowo zablokowano Ci dobieranie meczu"
