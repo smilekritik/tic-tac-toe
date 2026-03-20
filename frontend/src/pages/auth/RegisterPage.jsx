@@ -26,30 +26,45 @@ export default function RegisterPage() {
     <div className="page">
       <LanguageSwitcher />
       <h1>{t('auth:register.title')}</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          placeholder={t('auth:register.placeholder.email')}
-          value={form.email}
-          onChange={(e) => setForm({ ...form, email: e.target.value })}
-        />
-        <input
-          placeholder={t('auth:register.placeholder.username')}
-          value={form.username}
-          onChange={(e) => setForm({ ...form, username: e.target.value })}
-        />
-        <input
-          type="password"
-          placeholder={t('auth:register.placeholder.password')}
-          value={form.password}
-          onChange={(e) => setForm({ ...form, password: e.target.value })}
-        />
-        {error && <p className="error">{error}</p>}
-        {success && <p className="success">{success}</p>}
-        <button type="submit">{t('auth:register.submit')}</button>
-      </form>
-      <div className="links">
-        <Link to="/auth/login">{t('auth:register.links.login')}</Link>
-      </div>
+      {success ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <p className="success">{success}</p>
+          <Link to="/auth/login" style={{ textDecoration: 'none' }}>
+            <button type="button" style={{ width: '100%' }}>
+              {t('auth:register.actions.backToLogin')}
+            </button>
+          </Link>
+          <div className="links">
+            <Link to="/auth/login">{t('auth:register.links.login')}</Link>
+          </div>
+        </div>
+      ) : (
+        <>
+          <form onSubmit={handleSubmit}>
+            <input
+              placeholder={t('auth:register.placeholder.email')}
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+            <input
+              placeholder={t('auth:register.placeholder.username')}
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+            />
+            <input
+              type="password"
+              placeholder={t('auth:register.placeholder.password')}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+            {error && <p className="error">{error}</p>}
+            <button type="submit">{t('auth:register.submit')}</button>
+          </form>
+          <div className="links">
+            <Link to="/auth/login">{t('auth:register.links.login')}</Link>
+          </div>
+        </>
+      )}
     </div>
   );
 }
