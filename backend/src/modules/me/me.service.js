@@ -1,15 +1,41 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const fs = require('fs/promises');
+const path = require('path');
 const prisma = require('../../lib/prisma');
 const mailService = require('../mail/mail.service');
 const env = require('../../config/env');
 const { enforceBusinessRateLimit } = require('../../lib/businessRateLimit');
+
+const UPLOAD_PUBLIC_PREFIX = '/uploads/';
+const MANAGED_UPLOAD_RE = /^[a-f0-9]{32}\.(jpg|png|webp)$/;
+const UPLOAD_DIR = path.resolve(process.cwd(), env.upload.path);
 
 function createError(code, status) {
   const err = new Error(code);
   err.code = code;
   err.status = status;
   return err;
+}
+
+function resolveManagedUploadPath(publicPath) {
+  if (typeof publicPath !== 'string' || !publicPath.startsWith(UPLOAD_PUBLIC_PREFIX)) {
+    return null;
+  }
+
+  const filename = publicPath.slice(UPLOAD_PUBLIC_PREFIX.length);
+  if (!MANAGED_UPLOAD_RE.test(filename)) {
+    return null;
+  }
+
+  const absolutePath = path.resolve(UPLOAD_DIR, filename);
+  const relativePath = path.relative(UPLOAD_DIR, absolutePath);
+
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    return null;
+  }
+
+  return absolutePath;
 }
 
 function hydrateRatings(gameModes, ratings = []) {
@@ -165,11 +191,39 @@ async function uploadAvatar(userId, filePath) {
   // Business limit: not more than 5 avatar changes per 10 minutes.
   enforceBusinessRateLimit({ key: `avatar:user:${userId}`, maxInWindow: 5, windowMs: 10 * 60 * 1000 });
 
-  const profile = await prisma.userProfile.update({
+  const nextAvatarAbsolutePath = resolveManagedUploadPath(filePath);
+  if (!nextAvatarAbsolutePath) {
+    throw createError('INVALID_FILE_TYPE', 400);
+  }
+
+  const currentProfile = await prisma.userProfile.findUnique({
     where: { userId },
-    data: { avatarPath: filePath },
+    select: { avatarPath: true },
   });
-  return { avatarPath: profile.avatarPath };
+
+  try {
+    const profile = await prisma.userProfile.update({
+      where: { userId },
+      data: { avatarPath: filePath },
+    });
+
+    const previousAvatarAbsolutePath = resolveManagedUploadPath(currentProfile?.avatarPath);
+    if (
+      previousAvatarAbsolutePath &&
+      previousAvatarAbsolutePath !== nextAvatarAbsolutePath
+    ) {
+      await fs.unlink(previousAvatarAbsolutePath).catch((err) => {
+        if (err?.code !== 'ENOENT') {
+          throw err;
+        }
+      });
+    }
+
+    return { avatarPath: profile.avatarPath };
+  } catch (err) {
+    await fs.unlink(nextAvatarAbsolutePath).catch(() => {});
+    throw err;
+  }
 }
 
 module.exports = { getMe, updateProfile, updateUsername, requestEmailChange, uploadAvatar };

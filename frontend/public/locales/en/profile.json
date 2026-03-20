@@ -18,6 +18,17 @@
   "streak": "Win streak",
   "bestStreak": "Best streak",
   "noRatings": "No games played yet",
+  "avatarEditor": {
+    "title": "Adjust avatar",
+    "subtitle": "Move and zoom your photo to see how it will look as a round avatar.",
+    "zoom": "Zoom",
+    "hint": "Drag the photo to reposition it inside the circle.",
+    "preview": "Preview",
+    "change": "Choose another photo",
+    "cancel": "Cancel",
+    "save": "Save avatar",
+    "saving": "Saving..."
+  },
   "save": "Save",
   "saved": "Saved!"
 }

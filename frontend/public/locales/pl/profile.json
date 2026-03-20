@@ -18,6 +18,17 @@
   "streak": "Seria wygranych",
   "bestStreak": "Najlepsza seria",
   "noRatings": "Nie rozegrano jeszcze żadnych gier",
+  "avatarEditor": {
+    "title": "Dopasuj awatar",
+    "subtitle": "Przesuń i powiększ zdjęcie, aby zobaczyć jak będzie wyglądać jako okrągły awatar.",
+    "zoom": "Powiększenie",
+    "hint": "Przeciągnij zdjęcie, aby ustawić je wewnątrz okręgu.",
+    "preview": "Podgląd",
+    "change": "Wybierz inne zdjęcie",
+    "cancel": "Anuluj",
+    "save": "Zapisz awatar",
+    "saving": "Zapisywanie..."
+  },
   "save": "Zapisz",
   "saved": "Zapisano!"
 }
