@@ -1,16 +1,109 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Upload, Save } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Save, Trash2, Upload } from 'lucide-react';
 import { useMe } from '../hooks/useMe';
 import { useAuthStore } from '../store/auth.store';
 import client from '../api/client';
 import Layout from '../components/Layout';
 import Avatar from '../components/Avatar';
+import FlagIcon from '../components/FlagIcon';
 import {
   AVATAR_EDITOR,
   AVATAR_MASK_OFFSET,
   AVATAR_MASK_SIZE,
 } from '../components/avatarEditor.constants';
+
+const USERNAME_RE = /^[A-Za-z0-9_-]+$/;
+
+const cardStyle = {
+  background: 'hsl(var(--card))',
+  borderRadius: 12,
+  padding: 'min(20px, 2.5vh)',
+  border: '1px solid hsl(var(--border))',
+};
+
+const sectionLabelStyle = {
+  fontSize: 'min(12px, 1.5vh)',
+  fontWeight: 600,
+  marginBottom: 'min(12px, 1.5vh)',
+  color: 'hsl(var(--muted-foreground))',
+  textTransform: 'uppercase',
+  letterSpacing: 1,
+};
+
+const inputStyle = {
+  width: '100%',
+  height: 'min(44px, 5.4vh)',
+  fontSize: 'min(14px, 1.8vh)',
+};
+
+const helperTextStyle = {
+  fontSize: 12,
+  lineHeight: 1.5,
+  color: 'hsl(var(--muted-foreground))',
+};
+
+const baseButtonStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  minHeight: 'min(40px, 5vh)',
+  padding: '0 16px',
+  borderRadius: 8,
+  fontSize: 'min(14px, 1.8vh)',
+};
+
+const secondaryButtonStyle = {
+  ...baseButtonStyle,
+  background: 'hsl(var(--muted))',
+  color: 'hsl(var(--foreground))',
+};
+
+const primaryButtonStyle = {
+  ...baseButtonStyle,
+  width: '100%',
+};
+
+const dangerButtonStyle = {
+  ...baseButtonStyle,
+  width: '100%',
+  background: 'rgba(239, 68, 68, 0.14)',
+  color: '#fca5a5',
+  border: '1px solid rgba(239, 68, 68, 0.35)',
+};
+
+const badgeBaseStyle = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
+  padding: '6px 10px',
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: 600,
+};
+
+function normalizeUsername(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function normalizeEmail(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function maskEmailAddress(email) {
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    return '***';
+  }
+
+  const [localPart, domain] = email.split('@');
+  const safeLocal =
+    localPart.length <= 2
+      ? `${localPart[0] || '*'}***`
+      : `${localPart.slice(0, 2)}***${localPart.slice(-1)}`;
+
+  return `${safeLocal}@${domain}`;
+}
 
 function getCenteredOffset(imageWidth, imageHeight, scale) {
   return {
@@ -39,48 +132,111 @@ function clampOffset(offset, scale, imageWidth, imageHeight) {
   };
 }
 
+function getUsernameClientError(username, t) {
+  const trimmed = typeof username === 'string' ? username.trim() : '';
+
+  if (!trimmed) return t('profile:usernameErrors.required');
+  if (trimmed.length < 3 || trimmed.length > 24) return t('profile:usernameErrors.length');
+  if (/\s/.test(trimmed)) return t('profile:usernameErrors.spaces');
+  if (!USERNAME_RE.test(trimmed)) return t('profile:usernameErrors.characters');
+
+  return '';
+}
+
+function getPasswordClientError(password, t) {
+  if (!password) return t('profile:passwordErrors.required');
+  if (password.length < 8) return t('profile:passwordErrors.length');
+  if (password.length > 72) return t('profile:passwordErrors.maxLength');
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return t('profile:passwordErrors.format');
+  }
+
+  return '';
+}
+
+function formatVerificationTimeLeft(deadlineAt, locale) {
+  if (!deadlineAt) return null;
+
+  const timeLeftMs = new Date(deadlineAt).getTime() - Date.now();
+  if (timeLeftMs <= 0) return null;
+
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+  const days = Math.floor(timeLeftMs / (24 * 60 * 60 * 1000));
+  if (days >= 1) return rtf.format(days, 'day');
+
+  const hours = Math.max(1, Math.ceil(timeLeftMs / (60 * 60 * 1000)));
+  return rtf.format(hours, 'hour');
+}
+
 export default function ProfilePage() {
   const { me, loading, refetch } = useMe();
   const { t, i18n } = useTranslation(['profile', 'errors', 'common']);
   const setAuth = useAuthStore((s) => s.setAuth);
-  const user = useAuthStore((s) => s.user);
+  const clearAuth = useAuthStore((s) => s.clear);
   const accessToken = useAuthStore((s) => s.accessToken);
   const fileRef = useRef();
   const editorCanvasRef = useRef(null);
   const previewCanvasRef = useRef(null);
   const editorImageRef = useRef(null);
+  const usernameCheckTimeoutRef = useRef(null);
 
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [lang, setLang] = useState('');
-  const [chatEnabled, setChatEnabled] = useState(true);
-  const [publicProfile, setPublicProfile] = useState(true);
+  const [form, setForm] = useState({
+    username: '',
+    email: '',
+    preferredLanguage: 'en',
+    chatEnabledDefault: true,
+    publicProfileEnabled: true,
+  });
+  const [initialForm, setInitialForm] = useState(null);
   const [messages, setMessages] = useState({});
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [generalSaving, setGeneralSaving] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState({
+    state: 'idle',
+    message: '',
+  });
   const [avatarEditor, setAvatarEditor] = useState(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [dragState, setDragState] = useState(null);
 
-  const msg = (key, text, type = 'success') =>
+  const setMessage = (key, text, type = 'success') => {
     setMessages((prev) => ({ ...prev, [key]: { text, type } }));
-  const previewRatio = avatarEditor
-    ? AVATAR_EDITOR.previewSize / AVATAR_MASK_SIZE
-    : 1;
-  const zoomPercent = avatarEditor
-    ? Math.round((avatarEditor.scale / avatarEditor.baseScale) * 100)
-    : 100;
+  };
 
-  if (me && !username && !email) {
-    setUsername(me.username);
-    setEmail(me.email);
-    setLang(me.profile?.preferredLanguage || 'en');
-    setChatEnabled(me.profile?.chatEnabledDefault ?? true);
-    setPublicProfile(me.profile?.publicProfileEnabled ?? true);
-  }
+  useEffect(() => {
+    if (!me) return;
+
+    const nextForm = {
+      username: me.username || '',
+      email: me.email || '',
+      preferredLanguage: me.profile?.preferredLanguage || 'en',
+      chatEnabledDefault: me.profile?.chatEnabledDefault ?? true,
+      publicProfileEnabled: me.profile?.publicProfileEnabled ?? true,
+    };
+
+    setForm(nextForm);
+    setInitialForm(nextForm);
+    setIsEditingEmail(false);
+    setUsernameStatus({ state: 'idle', message: '' });
+  }, [me]);
 
   useEffect(() => {
     return () => {
       if (avatarEditor?.src?.startsWith('blob:')) {
         URL.revokeObjectURL(avatarEditor.src);
+      }
+
+      if (usernameCheckTimeoutRef.current) {
+        window.clearTimeout(usernameCheckTimeoutRef.current);
       }
     };
   }, [avatarEditor?.src]);
@@ -142,14 +298,11 @@ export default function ProfilePage() {
       context.stroke();
     });
 
+    const previewRatio = AVATAR_EDITOR.previewSize / AVATAR_MASK_SIZE;
+
     drawCanvas(previewCanvasRef.current, AVATAR_EDITOR.previewSize, (context) => {
       context.fillStyle = '#222';
-      context.fillRect(
-        0,
-        0,
-        AVATAR_EDITOR.previewSize,
-        AVATAR_EDITOR.previewSize,
-      );
+      context.fillRect(0, 0, AVATAR_EDITOR.previewSize, AVATAR_EDITOR.previewSize);
       context.save();
       context.beginPath();
       context.arc(
@@ -169,43 +322,87 @@ export default function ProfilePage() {
       );
       context.restore();
     });
-  }, [avatarEditor, previewRatio]);
+  }, [avatarEditor]);
 
-  const handleUsername = async () => {
-    try {
-      const { data } = await client.patch('/me/username', { username });
-      setAuth(accessToken, { ...user, username: data.username });
-      msg('username', t('profile:saved'));
-    } catch (err) {
-      const code = err.response?.data?.error?.code;
-      msg('username', t(`errors:${code || 'SOMETHING_WRONG'}`), 'error');
+  const normalizedUsername = normalizeUsername(form.username);
+  const normalizedEmail = normalizeEmail(form.email);
+  const initialUsername = initialForm ? normalizeUsername(initialForm.username) : '';
+  const initialEmail = initialForm ? normalizeEmail(initialForm.email) : '';
+  const usernameChanged = Boolean(initialForm) && normalizedUsername !== initialUsername;
+  const emailChanged = Boolean(initialForm) && isEditingEmail && normalizedEmail !== initialEmail;
+  const languageChanged =
+    Boolean(initialForm) && form.preferredLanguage !== initialForm.preferredLanguage;
+  const chatChanged =
+    Boolean(initialForm) && form.chatEnabledDefault !== initialForm.chatEnabledDefault;
+  const publicProfileChanged =
+    Boolean(initialForm) && form.publicProfileEnabled !== initialForm.publicProfileEnabled;
+  const generalDirty =
+    usernameChanged ||
+    emailChanged ||
+    languageChanged ||
+    chatChanged ||
+    publicProfileChanged;
+  const zoomPercent = avatarEditor
+    ? Math.round((avatarEditor.scale / avatarEditor.baseScale) * 100)
+    : 100;
+  const usernameClientError = getUsernameClientError(form.username, t);
+  const passwordClientError = getPasswordClientError(passwordForm.newPassword, t);
+  const passwordMismatch =
+    passwordForm.confirmPassword &&
+    passwordForm.newPassword !== passwordForm.confirmPassword;
+  const verificationTimeLeft = formatVerificationTimeLeft(
+    me?.emailVerificationDeadlineAt,
+    i18n.language,
+  );
+
+  useEffect(() => {
+    if (!initialForm) return undefined;
+
+    if (!usernameChanged) {
+      setUsernameStatus({ state: 'idle', message: '' });
+      return undefined;
     }
-  };
 
-  const handleEmail = async () => {
-    try {
-      if (me?.emailVerified) {
-        await client.patch('/me/email', { email });
-        msg('email', t('profile:emailChangeConfirmationSent'));
-      } else {
-        await client.post('/auth/resend-verification');
-        msg('email', t('profile:verificationEmailSent'));
+    if (usernameClientError) {
+      setUsernameStatus({ state: 'invalid', message: usernameClientError });
+      return undefined;
+    }
+
+    setUsernameStatus({ state: 'checking', message: t('profile:usernameStatus.checking') });
+
+    usernameCheckTimeoutRef.current = window.setTimeout(async () => {
+      try {
+        const { data } = await client.get('/me/username-availability', {
+          params: { username: form.username },
+        });
+
+        setUsernameStatus({
+          state: data.available ? 'available' : 'taken',
+          message: data.available
+            ? t('profile:usernameStatus.available')
+            : t('profile:usernameStatus.taken'),
+        });
+      } catch (err) {
+        const code = err.response?.data?.error?.code;
+        setUsernameStatus({
+          state: 'invalid',
+          message:
+            err.response?.data?.error?.message ||
+            t(`errors:${code || 'SOMETHING_WRONG'}`),
+        });
       }
-    } catch (err) {
-      const code = err.response?.data?.error?.code;
-      msg('email', t(`errors:${code || 'SOMETHING_WRONG'}`), 'error');
-    }
-  };
+    }, 650);
 
-  const handleProfile = async () => {
-    try {
-      await client.patch('/me/profile', { preferredLanguage: lang, chatEnabledDefault: chatEnabled, publicProfileEnabled: publicProfile });
-      i18n.changeLanguage(lang);
-      msg('profile', t('profile:saved'));
-    } catch {
-      msg('profile', t('errors:SOMETHING_WRONG'), 'error');
-    }
-  };
+    return () => {
+      if (usernameCheckTimeoutRef.current) {
+        window.clearTimeout(usernameCheckTimeoutRef.current);
+      }
+    };
+  }, [form.username, initialForm, t, usernameChanged, usernameClientError]);
+
+  const updateForm = (patch) => setForm((prev) => ({ ...prev, ...patch }));
+  const updatePasswordForm = (patch) =>
+    setPasswordForm((prev) => ({ ...prev, ...patch }));
 
   const closeAvatarEditor = () => {
     setAvatarEditor((prev) => {
@@ -241,26 +438,29 @@ export default function ProfilePage() {
 
           return {
             src,
-            fileName: file.name,
             imageWidth: image.naturalWidth,
             imageHeight: image.naturalHeight,
             baseScale: minScale,
             minScale: minScale * 0.5,
             maxScale: minScale * 4,
             scale: minScale,
-            offset: getCenteredOffset(image.naturalWidth, image.naturalHeight, minScale),
+            offset: getCenteredOffset(
+              image.naturalWidth,
+              image.naturalHeight,
+              minScale,
+            ),
           };
         });
       };
 
       image.onerror = () => {
         URL.revokeObjectURL(src);
-        msg('avatar', t('errors:SOMETHING_WRONG'), 'error');
+        setMessage('avatar', t('errors:SOMETHING_WRONG'), 'error');
       };
 
       image.src = src;
     } catch {
-      msg('avatar', t('errors:SOMETHING_WRONG'), 'error');
+      setMessage('avatar', t('errors:SOMETHING_WRONG'), 'error');
     }
   };
 
@@ -316,12 +516,7 @@ export default function ProfilePage() {
 
       return {
         ...prev,
-        offset: clampOffset(
-          nextOffset,
-          prev.scale,
-          prev.imageWidth,
-          prev.imageHeight,
-        ),
+        offset: clampOffset(nextOffset, prev.scale, prev.imageWidth, prev.imageHeight),
       };
     });
   };
@@ -370,127 +565,598 @@ export default function ProfilePage() {
         }, 'image/png');
       });
 
-      const form = new FormData();
-      form.append('avatar', blob, 'avatar.png');
+      const formData = new FormData();
+      formData.append('avatar', blob, 'avatar.png');
 
-      await client.post('/me/avatar', form, {
+      await client.post('/me/avatar', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       await refetch();
       closeAvatarEditor();
-      msg('avatar', t('profile:saved'));
+      setMessage('avatar', t('profile:saved'));
     } catch (err) {
       const code = err.response?.data?.error?.code;
-      msg('avatar', t(`errors:${code || 'SOMETHING_WRONG'}`), 'error');
+      setMessage('avatar', t(`errors:${code || 'SOMETHING_WRONG'}`), 'error');
     } finally {
       setAvatarUploading(false);
     }
   };
 
-  if (loading) return <div className="loading">{t('common:loading')}</div>;
+  const handleResendVerification = async () => {
+    setResendingVerification(true);
+    try {
+      await client.post('/auth/resend-verification');
+      setMessage('general', t('profile:verificationEmailSent'));
+    } catch (err) {
+      const code = err.response?.data?.error?.code;
+      setMessage('general', t(`errors:${code || 'SOMETHING_WRONG'}`), 'error');
+    } finally {
+      setResendingVerification(false);
+    }
+  };
 
-  const LANGS = [
-    { code: 'en', flag: '🇬🇧' },
-    { code: 'uk', flag: '🇺🇦' },
-    { code: 'pl', flag: '🇵🇱' },
+  const ensureUsernameAvailability = async () => {
+    if (!usernameChanged) return true;
+
+    if (usernameClientError) {
+      setUsernameStatus({ state: 'invalid', message: usernameClientError });
+      return false;
+    }
+
+    setUsernameStatus({ state: 'checking', message: t('profile:usernameStatus.checking') });
+
+    try {
+      const { data } = await client.get('/me/username-availability', {
+        params: { username: form.username },
+      });
+
+      if (!data.available) {
+        setUsernameStatus({
+          state: 'taken',
+          message: t('profile:usernameStatus.taken'),
+        });
+        return false;
+      }
+
+      setUsernameStatus({
+        state: 'available',
+        message: t('profile:usernameStatus.available'),
+      });
+      return true;
+    } catch (err) {
+      const code = err.response?.data?.error?.code;
+      setUsernameStatus({
+        state: 'invalid',
+        message:
+          err.response?.data?.error?.message ||
+          t(`errors:${code || 'SOMETHING_WRONG'}`),
+      });
+      return false;
+    }
+  };
+
+  const handleGeneralSave = async () => {
+    if (!generalDirty || !initialForm) return;
+
+    const usernameAvailable = await ensureUsernameAvailability();
+    if (!usernameAvailable) return;
+
+    const payload = {};
+    if (usernameChanged) payload.username = normalizedUsername;
+    if (emailChanged) payload.email = normalizedEmail;
+    if (languageChanged) payload.preferredLanguage = form.preferredLanguage;
+    if (chatChanged) payload.chatEnabledDefault = form.chatEnabledDefault;
+    if (publicProfileChanged) payload.publicProfileEnabled = form.publicProfileEnabled;
+
+    setGeneralSaving(true);
+
+    try {
+      const { data } = await client.patch('/me/settings', payload);
+
+      setAuth(accessToken, {
+        id: data.id,
+        username: data.username,
+        role: data.role,
+      });
+
+      await i18n.changeLanguage(data.profile?.preferredLanguage || form.preferredLanguage);
+      await refetch();
+
+      setMessage(
+        'general',
+        emailChanged
+          ? t('profile:settingsSavedWithEmailChange')
+          : t('profile:saved'),
+      );
+
+      if (emailChanged) {
+        setIsEditingEmail(false);
+      }
+    } catch (err) {
+      const code = err.response?.data?.error?.code;
+      setMessage('general', t(`errors:${code || 'SOMETHING_WRONG'}`), 'error');
+    } finally {
+      setGeneralSaving(false);
+    }
+  };
+
+  const handlePasswordSave = async () => {
+    if (!passwordForm.currentPassword) {
+      setMessage('password', t('profile:passwordErrors.currentRequired'), 'error');
+      return;
+    }
+
+    if (passwordClientError) {
+      setMessage('password', passwordClientError, 'error');
+      return;
+    }
+
+    if (passwordForm.currentPassword === passwordForm.newPassword) {
+      setMessage('password', t('profile:passwordErrors.sameAsCurrent'), 'error');
+      return;
+    }
+
+    if (passwordMismatch) {
+      setMessage('password', t('profile:passwordErrors.mismatch'), 'error');
+      return;
+    }
+
+    setPasswordSaving(true);
+
+    try {
+      await client.patch('/me/password', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      await client.post('/auth/logout');
+      clearAuth();
+      window.location.href = '/auth/login';
+    } catch (err) {
+      const code = err.response?.data?.error?.code;
+      setMessage('password', t(`errors:${code || 'SOMETHING_WRONG'}`), 'error');
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      setMessage('danger', t('profile:danger.passwordRequired'), 'error');
+      return;
+    }
+
+    if (!window.confirm(t('profile:danger.confirmDelete'))) {
+      return;
+    }
+
+    setDeleteSubmitting(true);
+
+    try {
+      await client.delete('/me', {
+        data: { password: deletePassword },
+      });
+      clearAuth();
+      window.location.href = '/';
+    } catch (err) {
+      const code = err.response?.data?.error?.code;
+      setMessage('danger', t(`errors:${code || 'SOMETHING_WRONG'}`), 'error');
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
+  if (loading || !me || !initialForm) {
+    return <div className="loading">{t('common:loading')}</div>;
+  }
+
+  const langs = [
+    { code: 'en' },
+    { code: 'uk' },
+    { code: 'pl' },
   ];
+
+  const usernameTone =
+    usernameStatus.state === 'invalid' || usernameStatus.state === 'taken'
+      ? '#f87171'
+      : usernameStatus.state === 'available'
+        ? '#4ade80'
+        : 'hsl(var(--muted-foreground))';
+
   return (
     <Layout>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'min(16px, 2vh)' }}>
-        <h1 style={{ fontSize: 'min(24px, 3vh)', fontWeight: 700 }}>{t('profile:title')}</h1>
+        <h1 style={{ fontSize: 'min(24px, 3vh)', fontWeight: 700 }}>
+          {t('profile:title')}
+        </h1>
 
-        {/* Avatar */}
-        <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
-          <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1 }}>{t('profile:avatar')}</h2>
+        <div style={cardStyle}>
+          <h2 style={sectionLabelStyle}>{t('profile:avatar')}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Avatar src={me?.profile?.avatarPath} size="min(64px, 8vh)" />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <button onClick={() => fileRef.current.click()} style={{ display: 'flex', alignItems: 'center', gap: 8, height: 'min(36px, 4.5vh)', padding: '0 16px', background: 'hsl(var(--muted))', borderRadius: 8, fontSize: 'min(14px, 1.8vh)', width: 'fit-content' }}>
-                <Upload size={14} /> {t('profile:upload')}
+            <Avatar src={me.profile?.avatarPath} size="min(72px, 9vh)" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                style={secondaryButtonStyle}
+              >
+                <Upload size={14} />
+                {t('profile:upload')}
               </button>
-              <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarSelect} />
-              {messages.avatar && <p style={{ fontSize: 12, color: messages.avatar.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.avatar.text}</p>}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleAvatarSelect}
+              />
+              {messages.avatar && (
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: messages.avatar.type === 'error' ? '#f87171' : '#4ade80',
+                  }}
+                >
+                  {messages.avatar.text}
+                </p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Username */}
-        <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
-          <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1 }}>{t('profile:username')}</h2>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input value={username} onChange={(e) => setUsername(e.target.value)} style={{ flex: 1, height: 'min(40px, 5vh)', fontSize: 'min(14px, 1.8vh)' }} />
-            <button onClick={handleUsername} style={{ height: 'min(40px, 5vh)', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, width: 96, justifyContent: 'center', fontSize: 'min(14px, 1.8vh)' }}>
-              <Save size={14} /> {t('profile:save')}
-            </button>
+        <div style={{ ...cardStyle, display: 'grid', gap: 'min(18px, 2.2vh)' }}>
+          <div>
+            <h2 style={sectionLabelStyle}>{t('profile:account')}</h2>
+            <p style={helperTextStyle}>{t('profile:accountSubtitle')}</p>
           </div>
-          {messages.username && <p style={{ fontSize: 12, marginTop: 8, color: messages.username.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.username.text}</p>}
-        </div>
 
-        {/* Email */}
-        <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
-          <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1 }}>{t('profile:email')}</h2>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'grid', gap: 8 }}>
+            <label htmlFor="username" style={{ fontSize: 13, fontWeight: 600 }}>
+              {t('profile:username')}
+            </label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{
-                flex: 1,
-                height: 'min(40px, 5vh)',
-                fontSize: 'min(14px, 1.8vh)',
-                border: `1px solid ${me?.emailVerified ? 'hsl(var(--border))' : '#ef4444'}`,
-                background: me?.emailVerified ? 'transparent' : 'rgba(248,113,113,0.08)',
-              }}
+              id="username"
+              value={form.username}
+              onChange={(e) => updateForm({ username: e.target.value })}
+              style={inputStyle}
+              autoComplete="off"
+              spellCheck={false}
             />
-            <button onClick={handleEmail} style={{ height: 'min(40px, 5vh)', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, width: 96, justifyContent: 'center', fontSize: 'min(14px, 1.8vh)' }}>
-              <Save size={14} /> {me?.emailVerified ? t('profile:save') : t('profile:resend')}
-            </button>
+            <div style={{ display: 'grid', gap: 4 }}>
+              <p style={helperTextStyle}>{t('profile:usernameHint')}</p>
+              {usernameStatus.message && (
+                <p style={{ ...helperTextStyle, color: usernameTone }}>
+                  {usernameStatus.message}
+                </p>
+              )}
+            </div>
           </div>
-          {!me?.emailVerified && (
-            <p style={{ fontSize: 12, marginTop: 4, color: '#f87171' }}>
-              {t('profile:emailNotVerified')}
-            </p>
-          )}
-          {messages.email && <p style={{ fontSize: 12, marginTop: 4, color: messages.email.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.email.text}</p>}
-        </div>
 
-        {/* Settings */}
-        <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
-          <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1 }}>{t('profile:language')}</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'min(16px, 2vh)' }}>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {LANGS.map((l) => (
-                <button key={l.code} onClick={() => setLang(l.code)}
+          <div style={{ display: 'grid', gap: 8 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+              }}
+            >
+              <label htmlFor="email" style={{ fontSize: 13, fontWeight: 600 }}>
+                {t('profile:email')}
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isEditingEmail) {
+                    updateForm({ email: initialForm.email });
+                  }
+                  setIsEditingEmail((prev) => !prev);
+                }}
+                style={secondaryButtonStyle}
+              >
+                {isEditingEmail ? (
+                  <>
+                    <EyeOff size={14} />
+                    {t('profile:cancelEmailEdit')}
+                  </>
+                ) : (
+                  <>
+                    <Eye size={14} />
+                    {t('profile:changeEmail')}
+                  </>
+                )}
+              </button>
+            </div>
+
+            {isEditingEmail ? (
+              <input
+                id="email"
+                type="email"
+                value={form.email}
+                onChange={(e) => updateForm({ email: e.target.value })}
+                style={inputStyle}
+                autoComplete="email"
+              />
+            ) : (
+              <div
+                style={{
+                  ...inputStyle,
+                  border: '1px solid hsl(var(--border))',
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 14px',
+                  color: 'hsl(var(--muted-foreground))',
+                  background: 'rgba(255,255,255,0.02)',
+                }}
+              >
+                {maskEmailAddress(me.email)}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gap: 8 }}>
+              {!me.emailVerified && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                  <span
+                    style={{
+                      ...badgeBaseStyle,
+                      background: 'rgba(250, 204, 21, 0.14)',
+                      color: '#facc15',
+                    }}
+                  >
+                    <Mail size={14} />
+                    {t('profile:pendingVerification')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={resendingVerification}
+                    style={secondaryButtonStyle}
+                  >
+                    {t('profile:resend')}
+                  </button>
+                </div>
+              )}
+
+              <p style={helperTextStyle}>
+                {isEditingEmail
+                  ? t('profile:emailEditHint')
+                  : t('profile:emailMaskedHint')}
+              </p>
+
+              {!me.emailVerified && verificationTimeLeft && (
+                <p style={{ ...helperTextStyle, color: '#fca5a5' }}>
+                  {t('profile:emailAutoDeletionNotice', {
+                    timeLeft: verificationTimeLeft,
+                  })}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gap: 10 }}>
+            <label style={{ fontSize: 13, fontWeight: 600 }}>
+              {t('profile:language')}
+            </label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {langs.map((lang) => (
+                <button
+                  key={lang.code}
+                  type="button"
+                  onClick={() => updateForm({ preferredLanguage: lang.code })}
                   style={{
-                    height: 'min(40px, 5vh)', padding: '0 16px', borderRadius: 8, fontSize: 'min(13px, 1.7vh)',
-                    border: `1px solid ${lang === l.code ? 'hsl(var(--primary))' : 'hsl(var(--border))'}`,
-                    background: lang === l.code ? 'hsl(var(--muted))' : 'transparent',
-                    color: lang === l.code ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
-                    display: 'flex', alignItems: 'center', gap: 6,
+                    ...secondaryButtonStyle,
+                    border: `1px solid ${
+                      form.preferredLanguage === lang.code
+                        ? 'hsl(var(--primary))'
+                        : 'hsl(var(--border))'
+                    }`,
+                    color:
+                      form.preferredLanguage === lang.code
+                        ? 'hsl(var(--primary))'
+                        : 'hsl(var(--muted-foreground))',
+                    background:
+                      form.preferredLanguage === lang.code
+                        ? 'rgba(129, 140, 248, 0.1)'
+                        : 'transparent',
                   }}
                 >
-                  <span>{l.flag}</span>
-                  <span>{t(`common:language.${l.code}`)}</span>
+                  <FlagIcon code={lang.code} size={18} />
+                  <span>{t(`common:language.${lang.code}`)}</span>
                 </button>
               ))}
             </div>
-
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 'min(40px, 5vh)' }}>
-              <span style={{ fontSize: 'min(14px, 1.8vh)' }}>{t('profile:publicProfile')}</span>
-              <input type="checkbox" checked={publicProfile} onChange={(e) => setPublicProfile(e.target.checked)} style={{ width: 16, height: 16 }} />
-            </label>
-
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 'min(40px, 5vh)' }}>
-              <span style={{ fontSize: 'min(14px, 1.8vh)' }}>{t('profile:chatEnabled')}</span>
-              <input type="checkbox" checked={chatEnabled} onChange={(e) => setChatEnabled(e.target.checked)} style={{ width: 16, height: 16 }} />
-            </label>
-
-            <button onClick={handleProfile} style={{ height: 'min(40px, 5vh)', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 'min(14px, 1.8vh)' }}>
-              <Save size={14} /> {t('profile:save')}
-            </button>
-            {messages.profile && <p style={{ fontSize: 12, textAlign: 'center', color: messages.profile.type === 'error' ? '#f87171' : '#4ade80' }}>{messages.profile.text}</p>}
           </div>
+
+          <label
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto',
+              gap: 12,
+              alignItems: 'center',
+            }}
+          >
+            <div style={{ display: 'grid', gap: 4 }}>
+              <span style={{ fontSize: 'min(14px, 1.8vh)', fontWeight: 600 }}>
+                {t('profile:publicProfile')}
+              </span>
+              <span style={helperTextStyle}>{t('profile:publicProfileHint')}</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={form.publicProfileEnabled}
+              onChange={(e) => updateForm({ publicProfileEnabled: e.target.checked })}
+              style={{ width: 16, height: 16 }}
+            />
+          </label>
+
+          <label
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto',
+              gap: 12,
+              alignItems: 'center',
+            }}
+          >
+            <div style={{ display: 'grid', gap: 4 }}>
+              <span style={{ fontSize: 'min(14px, 1.8vh)', fontWeight: 600 }}>
+                {t('profile:chatEnabled')}
+              </span>
+              <span style={helperTextStyle}>{t('profile:chatEnabledHint')}</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={form.chatEnabledDefault}
+              onChange={(e) => updateForm({ chatEnabledDefault: e.target.checked })}
+              style={{ width: 16, height: 16 }}
+            />
+          </label>
+
+          <div style={{ display: 'grid', gap: 10 }}>
+            <button
+              type="button"
+              onClick={handleGeneralSave}
+              disabled={
+                !generalDirty ||
+                generalSaving ||
+                usernameStatus.state === 'checking' ||
+                usernameStatus.state === 'invalid' ||
+                usernameStatus.state === 'taken'
+              }
+              style={primaryButtonStyle}
+            >
+              <Save size={14} />
+              {generalSaving ? t('profile:savingChanges') : t('profile:saveChanges')}
+            </button>
+            {messages.general && (
+              <p
+                style={{
+                  fontSize: 12,
+                  textAlign: 'center',
+                  color: messages.general.type === 'error' ? '#f87171' : '#4ade80',
+                }}
+              >
+                {messages.general.text}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div style={{ ...cardStyle, display: 'grid', gap: 'min(16px, 2vh)' }}>
+          <div>
+            <h2 style={sectionLabelStyle}>{t('profile:passwordSection')}</h2>
+            <p style={helperTextStyle}>{t('profile:passwordSectionHint')}</p>
+          </div>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            <label htmlFor="currentPassword" style={{ fontSize: 13, fontWeight: 600 }}>
+              {t('profile:currentPassword')}
+            </label>
+            <input
+              id="currentPassword"
+              type="password"
+              value={passwordForm.currentPassword}
+              onChange={(e) => updatePasswordForm({ currentPassword: e.target.value })}
+              style={inputStyle}
+              autoComplete="current-password"
+            />
+          </div>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            <label htmlFor="newPassword" style={{ fontSize: 13, fontWeight: 600 }}>
+              {t('profile:newPassword')}
+            </label>
+            <input
+              id="newPassword"
+              type="password"
+              value={passwordForm.newPassword}
+              onChange={(e) => updatePasswordForm({ newPassword: e.target.value })}
+              style={inputStyle}
+              autoComplete="new-password"
+            />
+            <p style={helperTextStyle}>{t('profile:newPasswordHint')}</p>
+          </div>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            <label htmlFor="confirmPassword" style={{ fontSize: 13, fontWeight: 600 }}>
+              {t('profile:confirmNewPassword')}
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              value={passwordForm.confirmPassword}
+              onChange={(e) => updatePasswordForm({ confirmPassword: e.target.value })}
+              style={inputStyle}
+              autoComplete="new-password"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handlePasswordSave}
+            disabled={passwordSaving}
+            style={primaryButtonStyle}
+          >
+            <Lock size={14} />
+            {passwordSaving ? t('profile:changingPassword') : t('profile:changePassword')}
+          </button>
+
+          {messages.password && (
+            <p
+              style={{
+                fontSize: 12,
+                color: messages.password.type === 'error' ? '#f87171' : '#4ade80',
+              }}
+            >
+              {messages.password.text}
+            </p>
+          )}
+        </div>
+
+        <div style={{ ...cardStyle, display: 'grid', gap: 'min(16px, 2vh)' }}>
+          <div>
+            <h2 style={{ ...sectionLabelStyle, color: '#fca5a5' }}>
+              {t('profile:danger.title')}
+            </h2>
+            <p style={helperTextStyle}>{t('profile:danger.subtitle')}</p>
+          </div>
+
+          <div style={{ display: 'grid', gap: 8 }}>
+            <label htmlFor="deletePassword" style={{ fontSize: 13, fontWeight: 600 }}>
+              {t('profile:danger.passwordLabel')}
+            </label>
+            <input
+              id="deletePassword"
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              style={inputStyle}
+              autoComplete="current-password"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleDeleteAccount}
+            disabled={deleteSubmitting}
+            style={dangerButtonStyle}
+          >
+            <Trash2 size={14} />
+            {deleteSubmitting
+              ? t('profile:danger.deleting')
+              : t('profile:danger.deleteAction')}
+          </button>
+
+          {messages.danger && (
+            <p
+              style={{
+                fontSize: 12,
+                color: messages.danger.type === 'error' ? '#f87171' : '#4ade80',
+              }}
+            >
+              {messages.danger.text}
+            </p>
+          )}
         </div>
       </div>
 
@@ -548,7 +1214,8 @@ export default function ProfilePage() {
                     position: 'relative',
                     overflow: 'hidden',
                     borderRadius: 24,
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
+                    background:
+                      'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
                     border: '1px solid hsl(var(--border))',
                     cursor: dragState ? 'grabbing' : 'grab',
                     touchAction: 'none',
@@ -567,7 +1234,15 @@ export default function ProfilePage() {
                 </div>
 
                 <div style={{ display: 'grid', gap: 8, maxWidth: AVATAR_EDITOR.cropSize }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13, color: 'hsl(var(--muted-foreground))' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      fontSize: 13,
+                      color: 'hsl(var(--muted-foreground))',
+                    }}
+                  >
                     <span>{t('profile:avatarEditor.zoom')}</span>
                     <span>{zoomPercent}%</span>
                   </div>
@@ -604,7 +1279,15 @@ export default function ProfilePage() {
                     justifyItems: 'center',
                   }}
                 >
-                  <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: 'hsl(var(--muted-foreground))' }}>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      letterSpacing: 1,
+                      textTransform: 'uppercase',
+                      color: 'hsl(var(--muted-foreground))',
+                    }}
+                  >
                     {t('profile:avatarEditor.preview')}
                   </span>
                   <canvas
@@ -625,14 +1308,7 @@ export default function ProfilePage() {
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   disabled={avatarUploading}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    width: '100%',
-                    background: 'hsl(var(--muted))',
-                  }}
+                  style={{ ...secondaryButtonStyle, width: '100%' }}
                 >
                   <Upload size={14} />
                   {t('profile:avatarEditor.change')}
@@ -645,15 +1321,17 @@ export default function ProfilePage() {
                 type="button"
                 onClick={closeAvatarEditor}
                 disabled={avatarUploading}
-                style={{
-                  background: 'hsl(var(--muted))',
-                  color: 'hsl(var(--foreground))',
-                }}
+                style={secondaryButtonStyle}
               >
                 {t('profile:avatarEditor.cancel')}
               </button>
-              <button type="button" onClick={handleAvatarSave} disabled={avatarUploading}>
-                <Save size={14} style={{ marginRight: 8, verticalAlign: 'middle' }} />
+              <button
+                type="button"
+                onClick={handleAvatarSave}
+                disabled={avatarUploading}
+                style={secondaryButtonStyle}
+              >
+                <Save size={14} />
                 {avatarUploading
                   ? t('profile:avatarEditor.saving')
                   : t('profile:avatarEditor.save')}

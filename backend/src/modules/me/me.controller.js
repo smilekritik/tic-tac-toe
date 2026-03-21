@@ -21,9 +21,30 @@ async function updateUsername(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function checkUsernameAvailability(req, res, next) {
+  try {
+    const result = await meService.checkUsernameAvailability(req.user.sub, req.query.username);
+    res.json(result);
+  } catch (err) { next(err); }
+}
+
 async function requestEmailChange(req, res, next) {
   try {
     const result = await meService.requestEmailChange(req.user.sub, req.body.email);
+    res.json(result);
+  } catch (err) { next(err); }
+}
+
+async function updateSettings(req, res, next) {
+  try {
+    const result = await meService.updateSettings(req.user.sub, req.body);
+    res.json(result);
+  } catch (err) { next(err); }
+}
+
+async function changePassword(req, res, next) {
+  try {
+    const result = await meService.changePassword(req.user.sub, req.body);
     res.json(result);
   } catch (err) { next(err); }
 }
@@ -42,4 +63,22 @@ async function uploadAvatar(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getMe, updateProfile, updateUsername, requestEmailChange, uploadAvatar };
+async function deleteAccount(req, res, next) {
+  try {
+    await meService.deleteAccount(req.user.sub, req.body.password);
+    res.clearCookie('refreshToken');
+    res.status(204).send();
+  } catch (err) { next(err); }
+}
+
+module.exports = {
+  getMe,
+  updateProfile,
+  updateUsername,
+  checkUsernameAvailability,
+  requestEmailChange,
+  updateSettings,
+  changePassword,
+  uploadAvatar,
+  deleteAccount,
+};

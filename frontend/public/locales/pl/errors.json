@@ -3,6 +3,8 @@
   "USERNAME_TAKEN": "Ta nazwa jest już zajęta",
   "INVALID_CREDENTIALS": "Nieprawidłowy email lub hasło",
   "EMAIL_NOT_VERIFIED": "Najpierw potwierdź email",
+  "EMAIL_ALREADY_VERIFIED": "Ten email jest już zweryfikowany",
+  "EMAIL_VERIFICATION_EXPIRED": "Czas na weryfikację emaila minął. Zarejestruj się ponownie.",
   "TOKEN_EXPIRED": "Link wygasł",
   "TOKEN_INVALID": "Nieprawidłowy link",
   "SOMETHING_WRONG": "Coś poszło nie tak",

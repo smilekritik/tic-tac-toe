@@ -6,6 +6,11 @@ const tokenService = require('./token.service');
 const mailService = require('../mail/mail.service');
 const env = require('../../config/env');
 const { enforceBusinessRateLimit } = require('../../lib/businessRateLimit');
+const {
+  EMAIL_VERIFICATION_GRACE_MS,
+  isEmailVerificationExpired,
+} = require('../../lib/emailVerificationWindow');
+const { deleteUsersWithRelations } = require('../../lib/deleteUsersWithRelations');
 
 function createError(code, status) {
   const err = new Error(code);
@@ -14,8 +19,31 @@ function createError(code, status) {
   return err;
 }
 
+async function cleanupExpiredUnverifiedUsers() {
+  const cutoff = new Date(Date.now() - EMAIL_VERIFICATION_GRACE_MS);
+  const expiredUsers = await prisma.user.findMany({
+    where: {
+      emailVerified: false,
+      createdAt: { lte: cutoff },
+    },
+    select: { id: true },
+  });
+
+  if (!expiredUsers.length) {
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await deleteUsersWithRelations(
+      tx,
+      expiredUsers.map((user) => user.id),
+    );
+  });
+}
+
 async function register({ email, username, password, lang = 'en' }) {
   const log = getLogger('auth');
+  await cleanupExpiredUnverifiedUsers();
   const existing = await prisma.user.findFirst({
     where: {
       OR: [
@@ -82,6 +110,7 @@ async function register({ email, username, password, lang = 'en' }) {
 
 async function login({ login, password, ip, userAgent }) {
   const log = getLogger('auth');
+  await cleanupExpiredUnverifiedUsers();
   const user = await prisma.user.findFirst({
     where: {
       OR: [
@@ -114,6 +143,13 @@ async function login({ login, password, ip, userAgent }) {
     throw createError('INVALID_CREDENTIALS', 401);
   }
 
+  if (isEmailVerificationExpired(user)) {
+    await prisma.$transaction(async (tx) => {
+      await deleteUsersWithRelations(tx, [user.id]);
+    }).catch(() => {});
+    throw createError('EMAIL_VERIFICATION_EXPIRED', 403);
+  }
+
   const accessToken = tokenService.generateAccessToken(user);
   const { token: refreshToken, hash, expiresAt } = tokenService.generateRefreshToken();
 
@@ -138,6 +174,7 @@ async function login({ login, password, ip, userAgent }) {
 
 async function refresh(refreshToken, ip, userAgent) {
   const log = getLogger('auth');
+  await cleanupExpiredUnverifiedUsers();
   const hash = tokenService.hashToken(refreshToken);
   const stored = await prisma.refreshToken.findFirst({
     where: { tokenHash: hash, revokedAt: null },
@@ -148,6 +185,21 @@ async function refresh(refreshToken, ip, userAgent) {
   }
 
   const user = await prisma.user.findUnique({ where: { id: stored.userId } });
+  if (!user) {
+    throw createError('TOKEN_INVALID', 401);
+  }
+
+  if (isEmailVerificationExpired(user)) {
+    await prisma.refreshToken.updateMany({
+      where: { userId: user.id },
+      data: { revokedAt: new Date() },
+    });
+    await prisma.$transaction(async (tx) => {
+      await deleteUsersWithRelations(tx, [user.id]);
+    }).catch(() => {});
+    throw createError('EMAIL_VERIFICATION_EXPIRED', 401);
+  }
+
   const accessToken = tokenService.generateAccessToken(user);
 
   // Rotate refresh token
@@ -274,6 +326,7 @@ async function resetPassword(token, newPassword) {
 }
 
 async function resendVerification(userId) {
+  await cleanupExpiredUnverifiedUsers();
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { profile: true },
@@ -285,6 +338,13 @@ async function resendVerification(userId) {
 
   if (user.emailVerified) {
     throw createError('EMAIL_ALREADY_VERIFIED', 400);
+  }
+
+  if (isEmailVerificationExpired(user)) {
+    await prisma.$transaction(async (tx) => {
+      await deleteUsersWithRelations(tx, [user.id]);
+    }).catch(() => {});
+    throw createError('EMAIL_VERIFICATION_EXPIRED', 403);
   }
 
   // Business limit: not more than 1 verification email per 60s.
@@ -314,4 +374,13 @@ async function resendVerification(userId) {
   return { message: 'Verification email sent' };
 }
 
-module.exports = { register, login, refresh, logout, verifyEmail, forgotPassword, resetPassword, resendVerification };
+module.exports = {
+  register,
+  login,
+  refresh,
+  logout,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
+  resendVerification,
+};

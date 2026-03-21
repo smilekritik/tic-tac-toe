@@ -6,6 +6,11 @@ const prisma = require('../../lib/prisma');
 const mailService = require('../mail/mail.service');
 const env = require('../../config/env');
 const { enforceBusinessRateLimit } = require('../../lib/businessRateLimit');
+const {
+  getEmailVerificationDeadline,
+  isEmailVerificationExpired,
+} = require('../../lib/emailVerificationWindow');
+const { deleteUsersWithRelations } = require('../../lib/deleteUsersWithRelations');
 
 const UPLOAD_PUBLIC_PREFIX = '/uploads/';
 const MANAGED_UPLOAD_RE = /^[a-f0-9]{32}\.(jpg|png|webp)$/;
@@ -113,9 +118,18 @@ async function getMe(userId) {
   ]);
 
   if (!user) throw createError('USER_NOT_FOUND', 404);
+  if (isEmailVerificationExpired(user)) {
+    await prisma.$transaction(async (tx) => {
+      await deleteUsersWithRelations(tx, [userId]);
+    }).catch(() => {});
+    throw createError('EMAIL_VERIFICATION_EXPIRED', 401);
+  }
 
   return {
     ...user,
+    emailVerificationDeadlineAt: user.emailVerified
+      ? null
+      : getEmailVerificationDeadline(user.createdAt),
     ratings: hydrateRatings(gameModes, user.ratings),
   };
 }
@@ -134,7 +148,10 @@ async function updateProfile(userId, { preferredLanguage, chatEnabledDefault, pu
 
 async function updateUsername(userId, username) {
   const existing = await prisma.user.findFirst({
-    where: { username: { equals: username, mode: 'insensitive' } },
+    where: {
+      username: { equals: username, mode: 'insensitive' },
+      NOT: { id: userId },
+    },
     select: { id: true },
   });
   if (existing) throw createError('USERNAME_TAKEN', 409);
@@ -147,12 +164,30 @@ async function updateUsername(userId, username) {
   return user;
 }
 
+async function checkUsernameAvailability(userId, username) {
+  const existing = await prisma.user.findFirst({
+    where: {
+      username: { equals: username, mode: 'insensitive' },
+      NOT: { id: userId },
+    },
+    select: { id: true },
+  });
+
+  return {
+    username,
+    available: !existing,
+  };
+}
+
 async function requestEmailChange(userId, newEmail) {
   // Business limit: not more than 1 email-change confirmation per 60s.
   enforceBusinessRateLimit({ key: `emailChange:user:${userId}`, minIntervalMs: 60 * 1000 });
 
   const existing = await prisma.user.findFirst({
-    where: { email: { equals: newEmail, mode: 'insensitive' } },
+    where: {
+      email: { equals: newEmail, mode: 'insensitive' },
+      NOT: { id: userId },
+    },
     select: { id: true },
   });
   if (existing) throw createError('EMAIL_TAKEN', 409);
@@ -185,6 +220,65 @@ async function requestEmailChange(userId, newEmail) {
   ).catch(() => {});
 
   return { message: 'Confirmation email sent' };
+}
+
+async function updateSettings(userId, input) {
+  const updates = [];
+
+  if (input.username !== undefined) {
+    updates.push(updateUsername(userId, input.username));
+  }
+
+  if (input.email !== undefined) {
+    updates.push(requestEmailChange(userId, input.email));
+  }
+
+  if (
+    input.preferredLanguage !== undefined ||
+    input.chatEnabledDefault !== undefined ||
+    input.publicProfileEnabled !== undefined
+  ) {
+    updates.push(updateProfile(userId, input));
+  }
+
+  await Promise.all(updates);
+  return getMe(userId);
+}
+
+async function changePassword(userId, { currentPassword, newPassword }) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      username: true,
+      email: true,
+      passwordHash: true,
+    },
+  });
+
+  if (!user) {
+    throw createError('USER_NOT_FOUND', 404);
+  }
+
+  const passwordMatches = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!passwordMatches) {
+    throw createError('INVALID_CREDENTIALS', 401);
+  }
+
+  const nextPasswordHash = await bcrypt.hash(newPassword, env.security.bcryptRounds);
+
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: nextPasswordHash },
+    }),
+    prisma.refreshToken.updateMany({
+      where: { userId },
+      data: { revokedAt: new Date() },
+    }),
+  ]);
+
+  return { message: 'Password updated' };
 }
 
 async function uploadAvatar(userId, filePath) {
@@ -226,4 +320,66 @@ async function uploadAvatar(userId, filePath) {
   }
 }
 
-module.exports = { getMe, updateProfile, updateUsername, requestEmailChange, uploadAvatar };
+async function deleteAccount(userId, password) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      passwordHash: true,
+    },
+  });
+
+  if (!user) {
+    throw createError('USER_NOT_FOUND', 404);
+  }
+
+  const passwordMatches = await bcrypt.compare(password, user.passwordHash);
+  if (!passwordMatches) {
+    throw createError('INVALID_CREDENTIALS', 401);
+  }
+
+  const avatarPath = await prisma.userProfile.findUnique({
+    where: { userId },
+    select: { avatarPath: true },
+  });
+
+  const managedAvatarAbsolutePath = resolveManagedUploadPath(avatarPath?.avatarPath);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.adminLog.deleteMany({
+      where: {
+        OR: [{ targetUserId: userId }, { adminUserId: userId }],
+      },
+    });
+
+    await tx.match.deleteMany({
+      where: {
+        OR: [{ playerXId: userId }, { playerOId: userId }, { winnerId: userId }],
+      },
+    });
+
+    await tx.user.delete({
+      where: { id: userId },
+    });
+  });
+
+  if (managedAvatarAbsolutePath) {
+    await fs.unlink(managedAvatarAbsolutePath).catch((err) => {
+      if (err?.code !== 'ENOENT') {
+        throw err;
+      }
+    });
+  }
+}
+
+module.exports = {
+  getMe,
+  updateProfile,
+  updateUsername,
+  checkUsernameAvailability,
+  requestEmailChange,
+  updateSettings,
+  changePassword,
+  uploadAvatar,
+  deleteAccount,
+};

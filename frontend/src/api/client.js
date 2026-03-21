@@ -16,7 +16,13 @@ client.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
-    if (err.response?.status === 401 && !original._retry) {
+    const errorCode = err.response?.data?.error?.code;
+    const shouldSkipRefresh = [
+      'INVALID_CREDENTIALS',
+      'EMAIL_VERIFICATION_EXPIRED',
+    ].includes(errorCode);
+
+    if (err.response?.status === 401 && !original._retry && !shouldSkipRefresh) {
       original._retry = true;
       try {
         const { data } = await axios.get('/api/auth/refresh', { withCredentials: true });

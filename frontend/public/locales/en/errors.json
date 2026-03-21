@@ -3,6 +3,8 @@
   "USERNAME_TAKEN": "This username is already taken",
   "INVALID_CREDENTIALS": "Invalid email or password",
   "EMAIL_NOT_VERIFIED": "Please verify your email first",
+  "EMAIL_ALREADY_VERIFIED": "This email is already verified",
+  "EMAIL_VERIFICATION_EXPIRED": "Your verification window expired. Please register again.",
   "TOKEN_EXPIRED": "Link has expired",
   "TOKEN_INVALID": "Invalid link",
   "SOMETHING_WRONG": "Something went wrong",
