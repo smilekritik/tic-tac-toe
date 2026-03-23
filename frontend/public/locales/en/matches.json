@@ -3,6 +3,8 @@
   "loading": "Loading match history...",
   "empty": "No matches yet.",
   "opponent": "Opponent",
+  "finalResult": "Final result",
+  "replay": "Replay",
   "moves": "Moves",
   "duration": "Duration",
   "ratingDelta": "Rating delta",

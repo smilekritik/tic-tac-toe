@@ -5,10 +5,23 @@
   "loading": "Loading match details...",
   "players": "Players",
   "result": "Result",
+  "mode": "Mode",
   "started": "Started",
   "duration": "Duration",
   "ratingDelta": "Rating delta",
   "winner": "Winner",
   "draw": "Draw",
-  "moves": "Moves"
+  "moves": "Moves",
+  "replay": "Replay",
+  "initialBoard": "Initial board",
+  "currentMove": "Move {{move}}",
+  "stepCounter": "Step {{current}} / {{total}}",
+  "controls": {
+    "start": "Start",
+    "previous": "Previous",
+    "play": "Play",
+    "pause": "Pause",
+    "next": "Next",
+    "end": "End"
+  }
 }

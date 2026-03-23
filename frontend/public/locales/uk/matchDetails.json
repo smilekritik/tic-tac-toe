@@ -5,10 +5,23 @@
   "loading": "Завантаження деталей матчу...",
   "players": "Гравці",
   "result": "Результат",
+  "mode": "Режим",
   "started": "Початок",
   "duration": "Тривалість",
   "ratingDelta": "Зміна рейтингу",
   "winner": "Переможець",
   "draw": "Нічия",
-  "moves": "Ходи"
+  "moves": "Ходи",
+  "replay": "Повтор",
+  "initialBoard": "Початкове поле",
+  "currentMove": "Хід {{move}}",
+  "stepCounter": "Крок {{current}} / {{total}}",
+  "controls": {
+    "start": "Початок",
+    "previous": "Назад",
+    "play": "Відтворити",
+    "pause": "Пауза",
+    "next": "Далі",
+    "end": "Кінець"
+  }
 }

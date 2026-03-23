@@ -3,6 +3,8 @@
   "loading": "Ładowanie historii meczów...",
   "empty": "Brak rozegranych meczów.",
   "opponent": "Przeciwnik",
+  "finalResult": "Wynik końcowy",
+  "replay": "Powtórka",
   "moves": "Ruchy",
   "duration": "Czas trwania",
   "ratingDelta": "Zmiana ratingu",
