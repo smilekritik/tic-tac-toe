@@ -112,5 +112,6 @@ const avatarUpload = [upload.single('avatar'), persistUploadedImage];
 
 module.exports = {
   avatarUpload,
+  detectImageType,
   resolveUploadedFile,
 };

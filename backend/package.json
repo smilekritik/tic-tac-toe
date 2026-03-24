@@ -5,7 +5,12 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "test": "npm run test:unit",
+    "test:unit": "cross-env NODE_OPTIONS=--require=./tests/setup/unit.setup.js vitest run --globals --environment node --pool threads tests/unit",
+    "test:smoke": "cross-env NODE_OPTIONS=--require=./tests/setup/unit.setup.js vitest run --globals --environment node --pool threads tests/smoke",
+    "test:coverage": "cross-env NODE_OPTIONS=--require=./tests/setup/unit.setup.js vitest run --globals --environment node --pool threads --coverage --coverage.provider v8 --coverage.reporter text --coverage.reporter html --coverage.include src/**/*.js --coverage.exclude src/docs/**/*.css --coverage.exclude src/docs/**/*.js tests/unit tests/smoke",
+    "ci:backend": "cross-env DATABASE_URL=postgresql://test:test@localhost:5432/tictactoe_test npx prisma generate && cross-env DATABASE_URL=postgresql://test:test@localhost:5432/tictactoe_test npx prisma validate && npm run test:smoke && npm run test:unit"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -26,7 +31,11 @@
     "swagger-ui-express": "^5.0.0"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.1",
+    "cross-env": "^10.1.0",
     "nodemon": "^3.0.0",
-    "prisma": "^5.22.0"
+    "prisma": "^5.22.0",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.1"
   }
 }

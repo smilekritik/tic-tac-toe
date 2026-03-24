@@ -23,3 +23,7 @@ uploads/
 
 #logs
 backend/logs/app.log
+
+#tests
+coverage/
+backend/coverage/

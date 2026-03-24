@@ -35,4 +35,10 @@ function verifyAccessToken(token) {
   return jwt.verify(token, env.jwt.secret);
 }
 
-module.exports = { generateAccessToken, generateRefreshToken, hashToken, verifyAccessToken };
+module.exports = {
+  generateAccessToken,
+  generateRefreshToken,
+  parseRefreshExpiration,
+  hashToken,
+  verifyAccessToken,
+};

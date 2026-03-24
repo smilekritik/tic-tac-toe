@@ -74,5 +74,9 @@ function enforceBusinessRateLimit({ key, maxInWindow, windowMs, minIntervalMs })
   buckets.set(key, ts);
 }
 
-module.exports = { enforceBusinessRateLimit };
+function resetBusinessRateLimits() {
+  buckets.clear();
+}
+
+module.exports = { enforceBusinessRateLimit, resetBusinessRateLimits };
 

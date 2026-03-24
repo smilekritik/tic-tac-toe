@@ -271,6 +271,9 @@ async function getMatchDetails(matchId, viewerUserId = null) {
 }
 
 module.exports = {
+  clampPagination,
+  mapMatchHistoryItem,
+  buildStateFromMoves,
   getMatchHistoryByUserId,
   getPublicMatchHistory,
   getMatchDetails,
