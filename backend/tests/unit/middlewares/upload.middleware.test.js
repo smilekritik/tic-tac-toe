@@ -27,6 +27,10 @@ describe('upload middleware helpers', () => {
     expect(detectImageType(Buffer.from('plain-text'))).toBeNull();
   });
 
+  it('rejects buffers that are too short to identify safely', () => {
+    expect(detectImageType(Buffer.from([0x89, 0x50, 0x4e]))).toBeNull();
+  });
+
   it('resolves a safe uploaded filename', () => {
     const resolved = resolveUploadedFile('0123456789abcdef0123456789abcdef.jpg');
 
@@ -37,5 +41,7 @@ describe('upload middleware helpers', () => {
   it('rejects dangerous or malformed filenames', () => {
     expect(() => resolveUploadedFile('../evil.jpg')).toThrow('UPLOAD_NOT_FOUND');
     expect(() => resolveUploadedFile('not-a-file.png')).toThrow('UPLOAD_NOT_FOUND');
+    expect(() => resolveUploadedFile('0123456789abcdef0123456789abcdef.JPG')).toThrow('UPLOAD_NOT_FOUND');
+    expect(() => resolveUploadedFile('0123456789abcdef0123456789abcdef.jpg.exe')).toThrow('UPLOAD_NOT_FOUND');
   });
 });
