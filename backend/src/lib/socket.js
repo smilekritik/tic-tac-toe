@@ -9,7 +9,11 @@ let io;
 
 function initSocket(httpServer, frontendUrl) {
   const log = getLogger('socket');
-  
+
+  if (io) {
+    return io;
+  }
+
   io = new Server(httpServer, {
     cors: { origin: frontendUrl, credentials: true },
   });
@@ -54,4 +58,15 @@ function getIo() {
   return io;
 }
 
-module.exports = { initSocket, getIo };
+async function closeSocket() {
+  if (!io) return;
+
+  await io.close();
+  io = null;
+}
+
+async function resetSocketForTests() {
+  await closeSocket();
+}
+
+module.exports = { initSocket, getIo, closeSocket, resetSocketForTests };

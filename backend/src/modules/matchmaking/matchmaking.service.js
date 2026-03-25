@@ -20,6 +20,10 @@ function isInQueue(userId) {
   return queue.has(userId);
 }
 
+function resetForTests() {
+  queue.clear();
+}
+
 async function tryMatch(currentUserId) {
   const currentPlayer = queue.get(currentUserId);
   if (!currentPlayer) return null;
@@ -50,4 +54,4 @@ async function tryMatch(currentUserId) {
   return null;
 }
 
-module.exports = { addToQueue, removeFromQueue, isInQueue, tryMatch };
+module.exports = { addToQueue, removeFromQueue, isInQueue, tryMatch, resetForTests };

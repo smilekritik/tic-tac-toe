@@ -1,6 +1,18 @@
 const matches = new Map();
 const userActiveMatch = new Map(); // userId -> matchId
 
+function clearManagedTimers(match) {
+  if (match?.timer) {
+    clearTimeout(match.timer);
+  }
+
+  Object.values(match?.reconnectTimers || {}).forEach((timer) => {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  });
+}
+
 function createMatch(matchId, playerX, playerO, gameMode) {
   matches.set(matchId, {
     matchId,
@@ -35,6 +47,7 @@ function updateMatch(matchId, updates) {
 function deleteMatch(matchId) {
   const match = matches.get(matchId);
   if (match) {
+    clearManagedTimers(match);
     userActiveMatch.delete(match.playerX.userId);
     userActiveMatch.delete(match.playerO.userId);
   }
@@ -56,4 +69,21 @@ function getActiveMatchForUser(userId) {
   return { matchId, match: matches.get(matchId) };
 }
 
-module.exports = { createMatch, getMatch, updateMatch, deleteMatch, getMatchByUserId, getActiveMatchForUser };
+function resetForTests() {
+  for (const match of matches.values()) {
+    clearManagedTimers(match);
+  }
+
+  matches.clear();
+  userActiveMatch.clear();
+}
+
+module.exports = {
+  createMatch,
+  getMatch,
+  updateMatch,
+  deleteMatch,
+  getMatchByUserId,
+  getActiveMatchForUser,
+  resetForTests,
+};

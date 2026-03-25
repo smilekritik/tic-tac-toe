@@ -13,7 +13,9 @@ function registerMatchmakingHandlers(socket, io) {
   const { id: userId, username } = socket.user;
 
   socket.on('matchmaking:join', async ({ modeCode } = {}) => {
-    if (matchmakingService.isInQueue(userId)) return;
+    if (matchmakingService.isInQueue(userId)) {
+      return socket.emit('matchmaking:error', { code: 'ALREADY_IN_QUEUE' });
+    }
 
     const requestedModeCode = typeof modeCode === 'string' ? modeCode : 'classic';
     if (!isSupportedMode(requestedModeCode)) {
