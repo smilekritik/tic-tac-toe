@@ -27,3 +27,4 @@ backend/logs/app.log
 #tests
 coverage/
 backend/coverage/
+backend/tests/.tmp-uploads/

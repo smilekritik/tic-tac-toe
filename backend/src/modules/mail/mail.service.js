@@ -3,12 +3,16 @@ const env = require('../../config/env');
 const { t } = require('../../lib/i18n');
 const { getLogger } = require('../../lib/logger');
 
-const transporter = nodemailer.createTransport({
-  host: env.smtp.host,
-  port: env.smtp.port,
-  secure: env.smtp.secure,
-  auth: { user: env.smtp.user, pass: env.smtp.password },
-});
+const transporter = nodemailer.createTransport(
+  env.nodeEnv === 'test'
+    ? { jsonTransport: true }
+    : {
+      host: env.smtp.host,
+      port: env.smtp.port,
+      secure: env.smtp.secure,
+      auth: { user: env.smtp.user, pass: env.smtp.password },
+    },
+);
 
 function buildHtml(text, url) {
   return `<p>${text}</p><a href="${url}">${url}</a>`;

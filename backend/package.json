@@ -8,9 +8,12 @@
     "seed": "node prisma/seed.js",
     "test": "npm run test:unit",
     "test:unit": "cross-env NODE_OPTIONS=--require=./tests/setup/unit.setup.js vitest run --globals --environment node --pool threads tests/unit",
+    "test:service": "cross-env NODE_OPTIONS=--require=./tests/setup/unit.setup.js vitest run --globals --environment node --pool threads tests/service",
     "test:smoke": "cross-env NODE_OPTIONS=--require=./tests/setup/unit.setup.js vitest run --globals --environment node --pool threads tests/smoke",
+    "test:integration": "cross-env NODE_OPTIONS=--require=./tests/setup/integration.setup.js vitest run --globals --environment node --pool threads --no-file-parallelism tests/integration",
     "test:coverage": "cross-env NODE_OPTIONS=--require=./tests/setup/unit.setup.js vitest run --globals --environment node --pool threads --coverage --coverage.provider v8 --coverage.reporter text --coverage.reporter html --coverage.include src/**/*.js --coverage.exclude src/docs/**/*.css --coverage.exclude src/docs/**/*.js tests/unit tests/smoke",
-    "ci:backend": "cross-env DATABASE_URL=postgresql://test:test@localhost:5432/tictactoe_test npx prisma generate && cross-env DATABASE_URL=postgresql://test:test@localhost:5432/tictactoe_test npx prisma validate && npm run test:smoke && npm run test:unit"
+    "ci:backend": "cross-env DATABASE_URL=postgresql://test:test@localhost:5432/tictactoe_test npx prisma generate && cross-env DATABASE_URL=postgresql://test:test@localhost:5432/tictactoe_test npx prisma validate && npm run test:smoke && npm run test:unit",
+    "ci:backend:db": "node ./scripts/run-db-tests.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
