@@ -6,6 +6,7 @@ const prisma = require('../../lib/prisma');
 const mailService = require('../mail/mail.service');
 const env = require('../../config/env');
 const { enforceBusinessRateLimit } = require('../../lib/businessRateLimit');
+const { normalizeEmail } = require('../../validators/auth.validators');
 const {
   getEmailVerificationDeadline,
   isEmailVerificationExpired,
@@ -222,6 +223,90 @@ async function requestEmailChange(userId, newEmail) {
   return { message: 'Confirmation email sent' };
 }
 
+async function confirmEmailChange(token) {
+  const normalizedToken = typeof token === 'string' ? token.trim() : '';
+  if (!normalizedToken) {
+    throw createError('TOKEN_INVALID', 400);
+  }
+
+  const record = await prisma.userEmailChange.findUnique({
+    where: { token: normalizedToken },
+  });
+
+  if (!record) {
+    throw createError('TOKEN_INVALID', 400);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: record.userId },
+    select: {
+      id: true,
+      email: true,
+    },
+  });
+
+  if (!user) {
+    throw createError('TOKEN_INVALID', 400);
+  }
+
+  if (record.confirmedAt) {
+    if (normalizeEmail(user.email) === normalizeEmail(record.newEmail)) {
+      return { message: 'Email already confirmed' };
+    }
+
+    throw createError('TOKEN_INVALID', 400);
+  }
+
+  if (record.expiresAt < new Date()) {
+    throw createError('TOKEN_EXPIRED', 400);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.user.findFirst({
+      where: {
+        email: { equals: record.newEmail, mode: 'insensitive' },
+        NOT: { id: record.userId },
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      throw createError('EMAIL_TAKEN', 409);
+    }
+
+    const now = new Date();
+
+    await tx.user.update({
+      where: { id: record.userId },
+      data: {
+        email: record.newEmail,
+        emailVerified: true,
+      },
+    });
+
+    await tx.userEmailChange.update({
+      where: { token: normalizedToken },
+      data: { confirmedAt: now },
+    });
+
+    await tx.userEmailChange.updateMany({
+      where: {
+        userId: record.userId,
+        confirmedAt: null,
+        NOT: { token: normalizedToken },
+      },
+      data: { confirmedAt: now },
+    });
+
+    await tx.refreshToken.updateMany({
+      where: { userId: record.userId },
+      data: { revokedAt: now },
+    });
+  });
+
+  return { message: 'Email updated' };
+}
+
 async function updateSettings(userId, input) {
   const updates = [];
 
@@ -378,6 +463,7 @@ module.exports = {
   updateUsername,
   checkUsernameAvailability,
   requestEmailChange,
+  confirmEmailChange,
   updateSettings,
   changePassword,
   uploadAvatar,

@@ -95,9 +95,9 @@ paths:
             schema:
               type: object
               required:
-                - newEmail
+                - email
               properties:
-                newEmail:
+                email:
                   type: string
                   format: email
       responses:
@@ -105,6 +105,25 @@ paths:
           description: Email change requested
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /api/me/email/confirm/{token}:
+    get:
+      tags:
+        - Me
+      summary: Confirm email change
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email updated
+        '400':
+          description: Invalid or expired token
+        '409':
+          description: Email is already taken
 
   /api/me/avatar:
     post:

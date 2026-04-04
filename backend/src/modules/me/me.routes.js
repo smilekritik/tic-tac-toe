@@ -6,6 +6,8 @@ const { validate, requireBodyObject } = require('../../middlewares/validate.midd
 const meValidators = require('../../validators/me.validators');
 const { uploadLimiter } = require('../../middlewares/rateLimit.middleware');
 
+router.get('/email/confirm/:token', controller.confirmEmailChange);
+
 router.use(requireAuth);
 
 router.get('/', controller.getMe);

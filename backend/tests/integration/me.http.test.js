@@ -139,6 +139,74 @@ describe('me HTTP integration', () => {
     expect(refreshTokens.every((token) => token.revokedAt)).toBe(true);
   });
 
+  it('confirms email change with a valid token', async () => {
+    const user = await createVerifiedUser(prisma, {
+      email: 'user@example.com',
+      username: 'player',
+      password: 'Password123',
+    });
+    const login = await loginAndGetTokens(app, {
+      login: user.email,
+      password: 'Password123',
+    });
+
+    const requestResponse = await request(app)
+      .patch('/api/me/email')
+      .set(createAuthHeaders(login.accessToken))
+      .send({
+        email: 'next@example.com',
+      });
+
+    expect(requestResponse.status).toBe(200);
+
+    const changeRecord = await prisma.userEmailChange.findFirst({
+      where: { userId: user.id, newEmail: 'next@example.com' },
+      orderBy: { expiresAt: 'desc' },
+    });
+
+    const confirmResponse = await request(app)
+      .get(`/api/me/email/confirm/${changeRecord.token}`);
+
+    expect(confirmResponse.status).toBe(200);
+
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+    });
+    const updatedChangeRecord = await prisma.userEmailChange.findUnique({
+      where: { token: changeRecord.token },
+    });
+    const refreshTokens = await prisma.refreshToken.findMany({
+      where: { userId: user.id },
+    });
+
+    expect(updatedUser.email).toBe('next@example.com');
+    expect(updatedChangeRecord.confirmedAt).toBeTruthy();
+    expect(refreshTokens.every((token) => token.revokedAt)).toBe(true);
+  });
+
+  it('rejects expired email change token', async () => {
+    const user = await createVerifiedUser(prisma, {
+      email: 'user@example.com',
+      username: 'player',
+      password: 'Password123',
+    });
+
+    await prisma.userEmailChange.create({
+      data: {
+        userId: user.id,
+        newEmail: 'expired@example.com',
+        token: 'expired-email-change-token',
+        expiresAt: new Date(Date.now() - 60 * 1000),
+      },
+    });
+
+    const response = await request(app)
+      .get('/api/me/email/confirm/expired-email-change-token');
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('TOKEN_EXPIRED');
+  });
+
   it('accepts valid avatar upload', async () => {
     const user = await createVerifiedUser(prisma, {
       email: 'user@example.com',

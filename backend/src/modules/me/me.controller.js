@@ -35,6 +35,13 @@ async function requestEmailChange(req, res, next) {
   } catch (err) { next(err); }
 }
 
+async function confirmEmailChange(req, res, next) {
+  try {
+    const result = await meService.confirmEmailChange(req.params.token);
+    res.json(result);
+  } catch (err) { next(err); }
+}
+
 async function updateSettings(req, res, next) {
   try {
     const result = await meService.updateSettings(req.user.sub, req.body);
@@ -77,6 +84,7 @@ module.exports = {
   updateUsername,
   checkUsernameAvailability,
   requestEmailChange,
+  confirmEmailChange,
   updateSettings,
   changePassword,
   uploadAvatar,
