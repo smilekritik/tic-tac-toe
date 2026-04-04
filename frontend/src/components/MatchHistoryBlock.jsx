@@ -39,7 +39,37 @@ function getFinalResultLabel(t, match) {
   return `${baseResult} • ${t(`matches:reason.${specialFinishReason}`)}`;
 }
 
-export default function MatchHistoryBlock({ t, matches = [], loading = false, from }) {
+function getPaginationButtonStyle(disabled) {
+  return {
+    minWidth: 38,
+    height: 38,
+    borderRadius: 8,
+    border: '1px solid hsl(var(--border))',
+    background: disabled ? 'hsl(var(--muted))' : 'hsl(var(--background))',
+    color: disabled ? 'hsl(var(--muted-foreground))' : 'hsl(var(--foreground))',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 700,
+    opacity: disabled ? 0.5 : 1,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+  };
+}
+
+export default function MatchHistoryBlock({
+  t,
+  matches = [],
+  loading = false,
+  from,
+  pagination = null,
+  onPageChange,
+}) {
+  const currentPage = pagination?.page || 1;
+  const total = pagination?.total || matches.length;
+  const limit = pagination?.limit || matches.length || 1;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const showPagination = typeof onPageChange === 'function' && totalPages > 1;
+
   return (
     <div style={{ background: 'hsl(var(--card))', borderRadius: 12, padding: 'min(20px, 2.5vh)', border: '1px solid hsl(var(--border))' }}>
       <h2 style={{ fontSize: 'min(12px, 1.5vh)', fontWeight: 600, marginBottom: 'min(12px, 1.5vh)', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -153,6 +183,77 @@ export default function MatchHistoryBlock({ t, matches = [], loading = false, fr
               </div>
             );
           })}
+
+          {showPagination && (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                marginTop: 6,
+                paddingTop: 2,
+              }}
+            >
+              <div style={{ fontSize: 'min(13px, 1.7vh)', color: 'hsl(var(--muted-foreground))' }}>
+                {t('matches:pagination.status', { page: currentPage, totalPages, total })}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => onPageChange(1)}
+                  disabled={currentPage <= 1}
+                  aria-label={t('matches:pagination.first')}
+                  title={t('matches:pagination.first')}
+                  style={getPaginationButtonStyle(currentPage <= 1)}
+                >
+                  {'<<'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPageChange(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  aria-label={t('matches:pagination.previous')}
+                  title={t('matches:pagination.previous')}
+                  style={getPaginationButtonStyle(currentPage <= 1)}
+                >
+                  {'<'}
+                </button>
+                <div
+                  style={{
+                    minWidth: 88,
+                    textAlign: 'center',
+                    fontSize: 'min(13px, 1.7vh)',
+                    fontWeight: 600,
+                  }}
+                >
+                  {currentPage} / {totalPages}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onPageChange(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  aria-label={t('matches:pagination.next')}
+                  title={t('matches:pagination.next')}
+                  style={getPaginationButtonStyle(currentPage >= totalPages)}
+                >
+                  {'>'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onPageChange(totalPages)}
+                  disabled={currentPage >= totalPages}
+                  aria-label={t('matches:pagination.last')}
+                  title={t('matches:pagination.last')}
+                  style={getPaginationButtonStyle(currentPage >= totalPages)}
+                >
+                  {'>>'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

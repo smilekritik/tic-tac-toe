@@ -9,6 +9,13 @@
   "duration": "Duration",
   "ratingDelta": "Rating delta",
   "finishReason": "Finish",
+  "pagination": {
+    "first": "First page",
+    "previous": "Previous page",
+    "next": "Next page",
+    "last": "Last page",
+    "status": "Page {{page}} of {{totalPages}} • {{total}} matches"
+  },
   "result": {
     "win": "Win",
     "loss": "Loss",

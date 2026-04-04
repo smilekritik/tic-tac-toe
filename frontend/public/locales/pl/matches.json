@@ -9,6 +9,13 @@
   "duration": "Czas trwania",
   "ratingDelta": "Zmiana ratingu",
   "finishReason": "Zakończenie",
+  "pagination": {
+    "first": "Pierwsza strona",
+    "previous": "Poprzednia strona",
+    "next": "Następna strona",
+    "last": "Ostatnia strona",
+    "status": "Strona {{page}} z {{totalPages}} • {{total}} meczów"
+  },
   "result": {
     "win": "Wygrana",
     "loss": "Przegrana",

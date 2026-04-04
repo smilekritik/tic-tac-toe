@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trophy } from 'lucide-react';
 import client from '../api/client';
@@ -8,39 +8,91 @@ import Layout from '../components/Layout';
 import Avatar from '../components/Avatar';
 import MatchHistoryBlock from '../components/MatchHistoryBlock';
 
+const MATCHES_PER_PAGE = 5;
+
 function getWinRate(rating) {
   if (!rating?.gamesPlayed) return 0;
   return Math.round((rating.wins / rating.gamesPlayed) * 100);
 }
 
+function getPageFromSearchParams(searchParams) {
+  const page = Number.parseInt(searchParams.get('page') || '1', 10);
+  return Number.isInteger(page) && page > 0 ? page : 1;
+}
+
 export default function PublicProfilePage() {
   const { username } = useParams();
   const { t } = useTranslation(['errors', 'common', 'profile', 'matches']);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [profile, setProfile] = useState(null);
   const [matches, setMatches] = useState([]);
+  const [matchesMeta, setMatchesMeta] = useState({
+    page: 1,
+    limit: MATCHES_PER_PAGE,
+    total: 0,
+    hasMore: false,
+  });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const currentUser = useAuthStore((s) => s.user);
   const isOwn = currentUser?.username === username;
   const location = useLocation();
+  const currentPage = getPageFromSearchParams(searchParams);
+
+  function handlePageChange(nextPage) {
+    const safePage = Math.max(1, nextPage);
+    setLoading(true);
+    setSearchParams((prev) => {
+      const nextParams = new URLSearchParams(prev);
+
+      if (safePage === 1) {
+        nextParams.delete('page');
+      } else {
+        nextParams.set('page', String(safePage));
+      }
+
+      return nextParams;
+    });
+  }
 
   useEffect(() => {
     const profileRequest = isOwn ? client.get('/me') : client.get(`/users/${username}`);
-    const matchesRequest = isOwn ? client.get('/me/matches') : client.get(`/users/${username}/matches`);
+    const matchesRequest = isOwn
+      ? client.get('/me/matches', { params: { page: currentPage, limit: MATCHES_PER_PAGE } })
+      : client.get(`/users/${username}/matches`, { params: { page: currentPage, limit: MATCHES_PER_PAGE } });
 
     Promise.all([profileRequest, matchesRequest])
       .then(([profileResponse, matchesResponse]) => {
+        const history = matchesResponse.data || {};
+        const totalPages = Math.max(1, Math.ceil((history.total || 0) / (history.limit || MATCHES_PER_PAGE)));
+
+        if ((history.total || 0) > 0 && currentPage > totalPages) {
+          setSearchParams((prev) => {
+            const nextParams = new URLSearchParams(prev);
+            nextParams.set('page', String(totalPages));
+            return nextParams;
+          }, { replace: true });
+          return;
+        }
+
         setProfile(profileResponse.data);
-        setMatches(matchesResponse.data.items || []);
+        setMatches(history.items || []);
+        setMatchesMeta({
+          page: history.page || currentPage,
+          limit: history.limit || MATCHES_PER_PAGE,
+          total: history.total || 0,
+          hasMore: Boolean(history.hasMore),
+        });
+        setError(null);
       })
       .catch((err) => {
         const code = err.response?.data?.error?.code;
         setError(t(`errors:${code || 'SOMETHING_WRONG'}`));
       })
       .finally(() => setLoading(false));
-  }, [username, isOwn, t]);
+  }, [username, isOwn, currentPage, t, setSearchParams]);
 
-  if (loading) return <div className="loading">{t('common:loading')}</div>;
+  if (loading || !profile || profile.username !== username) return <div className="loading">{t('common:loading')}</div>;
 
   if (error) return (
     <Layout>
@@ -92,7 +144,13 @@ export default function PublicProfilePage() {
           </div>
         )}
 
-        <MatchHistoryBlock t={t} matches={matches} from={`${location.pathname}${location.search}`} />
+        <MatchHistoryBlock
+          t={t}
+          matches={matches}
+          from={`${location.pathname}${location.search}`}
+          pagination={matchesMeta}
+          onPageChange={handlePageChange}
+        />
       </div>
     </Layout>
   );
