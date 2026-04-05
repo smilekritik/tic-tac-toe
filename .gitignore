@@ -12,7 +12,7 @@ Thumbs.db
 rebuild.ps1
 
 # Uploads
-uploads/
+/uploads/
 
 # tests/build/logs
 coverage/
