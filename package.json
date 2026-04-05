@@ -1,6 +1,12 @@
 {
   "name": "tic-tac-toe-workspace",
   "private": true,
+  "scripts": {
+    "test:nest:build": "npm --prefix backend-nest run build",
+    "test:nest:smoke": "npm --prefix backend-nest run test:smoke",
+    "test:nest:ws": "docker compose -f docker-compose.dev.yml --env-file .env run --rm backend-nest sh -lc \"npm install --include=dev && npx prisma migrate deploy --schema /app/prisma/schema.prisma && npm run test:ws\"",
+    "test:nest:gate": "npm run test:nest:build && npm run test:nest:smoke && npm run test:nest:ws"
+  },
   "dependencies": {
     "@prisma/client": "^5.22.0"
   },

@@ -229,16 +229,16 @@ describeWs('gameplay websocket e2e', () => {
     });
   });
 
-  it('ends the match on turn timeout using fake timers', async () => {
+  it('ends the match on turn timeout using real timers', async () => {
     const { matchId, socketX, socketO, userO } = await createMatchedPlayers();
-    vi.useFakeTimers();
     await joinMatch(socketX, socketO, matchId);
 
     const endedPromise = waitForEvent<{ reason: string; winnerId: string }>(socketX, 'game:ended', {
       predicate: (payload) => payload?.reason === 'timeout',
+      timeout: 2000,
     });
 
-    await vi.advanceTimersByTimeAsync(250);
+    await new Promise((resolve) => setTimeout(resolve, 350));
 
     await expect(endedPromise).resolves.toMatchObject({
       reason: 'timeout',
@@ -248,7 +248,7 @@ describeWs('gameplay websocket e2e', () => {
     const match = await wsServer.prisma.match.findUnique({ where: { id: matchId } });
     expect(match?.status).toBe('finished');
     expect(match?.resultType).toBe('timeout');
-  });
+  }, 10000);
 
   it('ends the match as abandon when reconnect window expires using fake timers', async () => {
     const { matchId, socketX, socketO, userO } = await createMatchedPlayers();

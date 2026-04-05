@@ -138,7 +138,20 @@ implements OnGatewayInit<Server>, OnGatewayConnection<AuthenticatedSocket>, OnGa
     }
 
     const maybeStarted = await this.gameplayService.maybeStartMatch(matchId);
-    const updatedMatch = maybeStarted || this.gameStateService.getMatch(matchId);
+    const updatedMatch = maybeStarted
+      ? this.gameplayService.startTurnTimer(matchId, async () => {
+          const current = this.gameStateService.getMatch(matchId);
+          if (!current || !current.gameState) {
+            return;
+          }
+
+          const winner = current.gameState.currentSymbol === 'X' ? current.playerO : current.playerX;
+          const endedPayload = await this.gameplayService.endMatch(matchId, winner.userId, 'timeout');
+          if (endedPayload) {
+            this.server.to(`match:${matchId}`).emit('game:ended', endedPayload);
+          }
+        }) || maybeStarted
+      : this.gameStateService.getMatch(matchId);
     if (!updatedMatch?.gameState) {
       return;
     }

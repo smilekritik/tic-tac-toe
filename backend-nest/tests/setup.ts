@@ -13,8 +13,13 @@ process.env.LOGIN_RATE_LIMIT_MAX = process.env.LOGIN_RATE_LIMIT_MAX || '1000';
 process.env.UPLOAD_RATE_LIMIT_MAX = process.env.UPLOAD_RATE_LIMIT_MAX || '1000';
 process.env.GAME_TURN_TIMEOUT_MS = process.env.GAME_TURN_TIMEOUT_MS || '200';
 process.env.GAME_CHAT_RATE_LIMIT_MS = process.env.GAME_CHAT_RATE_LIMIT_MS || '200';
-process.env.DATABASE_URL = (process.env.DATABASE_URL || 'postgresql://postgres:password@127.0.0.1:5432/tictactoe?schema=public')
-  .replace('@postgres:', '@127.0.0.1:')
-  .replace(/"/g, '');
+
+const baseDatabaseUrl = (
+  process.env.DATABASE_URL || 'postgresql://postgres:password@127.0.0.1:5432/tictactoe?schema=public'
+).replace(/"/g, '');
+
+process.env.DATABASE_URL = process.env.RUN_WS_E2E === 'true'
+  ? baseDatabaseUrl
+  : baseDatabaseUrl.replace('@postgres:', '@127.0.0.1:');
 
 fs.mkdirSync(path.resolve(process.cwd(), process.env.UPLOAD_PATH), { recursive: true });

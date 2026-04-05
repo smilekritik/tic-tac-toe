@@ -90,15 +90,7 @@ export class GameplayService {
       return null;
     }
 
-    return this.startTurnTimer(matchId, async () => {
-      const current = this.gameStateService.getMatch(matchId);
-      if (!current || !current.gameState) {
-        return;
-      }
-
-      const winner = current.gameState.currentSymbol === 'X' ? current.playerO : current.playerX;
-      await this.endMatch(matchId, winner.userId, 'timeout');
-    });
+    return updated;
   }
 
   startTurnTimer(matchId: string, onTimeout: () => Promise<void> | void): ActiveMatchState | null {

@@ -9,7 +9,7 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:smoke": "vitest run tests/smoke",
-    "test:ws": "cross-env RUN_WS_E2E=true vitest run tests/ws",
+    "test:ws": "cross-env RUN_WS_E2E=true vitest run tests/ws --maxWorkers=1 --fileParallelism=false",
     "prisma:generate": "cross-env PRISMA_GENERATE_SKIP_AUTOINSTALL=1 prisma generate --schema ../prisma/schema.prisma",
     "prisma:validate": "cross-env PRISMA_GENERATE_SKIP_AUTOINSTALL=1 prisma validate --schema ../prisma/schema.prisma",
     "seed": "node ../prisma/seed.js"
