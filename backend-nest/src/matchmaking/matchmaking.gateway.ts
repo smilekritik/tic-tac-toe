@@ -12,6 +12,7 @@ import type { Server } from 'socket.io';
 import { deleteUsersWithRelations } from '../common/helpers/delete-users-with-relations';
 import { isEmailVerificationExpired } from '../common/helpers/email-verification-window';
 import { nowDate, nowMs } from '../common/time/dayjs';
+import { socketGatewayConfig } from '../config/socket-gateway.config';
 import { GameStateService } from '../game/game-state.service';
 import { isSupportedMode } from '../game/engine/game-modes';
 import { AppLoggerService } from '../logger/logger.service';
@@ -20,12 +21,7 @@ import { MatchmakingService } from './matchmaking.service';
 import { SocketAuthService } from './socket-auth.service';
 import type { AuthenticatedSocket } from './interfaces/authenticated-socket.interface';
 
-@WebSocketGateway({
-  cors: {
-    origin: true,
-    credentials: true,
-  },
-})
+@WebSocketGateway(socketGatewayConfig)
 export class MatchmakingGateway
 implements OnGatewayInit<Server>, OnGatewayConnection<AuthenticatedSocket>, OnGatewayDisconnect<AuthenticatedSocket> {
   @WebSocketServer()

@@ -10,18 +10,14 @@ import {
 } from '@nestjs/websockets';
 import type { Server } from 'socket.io';
 import { nowMs } from '../common/time/dayjs';
+import { socketGatewayConfig } from '../config/socket-gateway.config';
 import { AppLoggerService } from '../logger/logger.service';
 import { SocketAuthService } from '../matchmaking/socket-auth.service';
 import type { AuthenticatedSocket } from '../matchmaking/interfaces/authenticated-socket.interface';
 import { GameStateService } from './game-state.service';
 import { GameplayService } from './gameplay.service';
 
-@WebSocketGateway({
-  cors: {
-    origin: true,
-    credentials: true,
-  },
-})
+@WebSocketGateway(socketGatewayConfig)
 export class GameplayGateway
 implements OnGatewayInit<Server>, OnGatewayConnection<AuthenticatedSocket>, OnGatewayDisconnect<AuthenticatedSocket> {
   @WebSocketServer()

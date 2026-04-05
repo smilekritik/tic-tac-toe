@@ -1,9 +1,11 @@
 import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import type { NextFunction, Request, Response } from 'express';
 import path from 'node:path';
 import { AuthController } from './auth/auth.controller';
 import { AuthModule } from './auth/auth.module';
+import { TokenService } from './auth/token.service';
 import { AppExceptionFilter } from './common/filters/app-exception.filter';
 import { createRateLimiter } from './common/rate-limit/rate-limit';
 import { RequestContextMiddleware } from './context/request-context.middleware';
@@ -19,11 +21,16 @@ import { RequestContextService } from './context/request-context.service';
 import { MailModule } from './mail/mail.module';
 import { MeController } from './me/me.controller';
 import { MeModule } from './me/me.module';
+import { UsersController } from './users/users.controller';
 import { UsersModule } from './users/users.module';
+import { MatchesController } from './matches/matches.controller';
 import { MatchesModule } from './matches/matches.module';
+import { LeaderboardController } from './leaderboard/leaderboard.controller';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
+import { GameController } from './game/game.controller';
 import { GameModule } from './game/game.module';
 import { MatchmakingModule } from './matchmaking/matchmaking.module';
+import type { AuthenticatedRequest } from './auth/interfaces/authenticated-request.interface';
 
 @Module({
   imports: [
@@ -60,6 +67,7 @@ export class AppModule implements NestModule {
     private readonly config: AppConfigService,
     private readonly logger: AppLoggerService,
     private readonly requestContext: RequestContextService,
+    private readonly tokenService: TokenService,
   ) {}
 
   configure(consumer: MiddlewareConsumer): void {
@@ -108,15 +116,40 @@ export class AppModule implements NestModule {
       this.logger,
       this.requestContext,
     );
+    const uploadRateLimitAuth = (req: Request, _res: Response, next: NextFunction) => {
+      const authReq = req as AuthenticatedRequest;
+      const header = authReq.headers.authorization;
+
+      if (!header?.startsWith('Bearer ')) {
+        next();
+        return;
+      }
+
+      try {
+        authReq.user = this.tokenService.verifyAccessToken(header.slice(7));
+      } catch {
+        authReq.user = undefined;
+      }
+
+      next();
+    };
 
     consumer.apply(RequestContextMiddleware).forRoutes('*');
     consumer.apply(HttpLoggerMiddleware).forRoutes('*');
-    consumer.apply(apiLimiter, authLimiter).forRoutes(AuthController);
+    consumer.apply(apiLimiter).forRoutes(
+      AuthController,
+      MeController,
+      UsersController,
+      MatchesController,
+      LeaderboardController,
+      GameController,
+    );
+    consumer.apply(authLimiter).forRoutes(AuthController);
     consumer.apply(loginLimiter).forRoutes({
       path: 'api/auth/login',
       method: RequestMethod.POST,
     });
-    consumer.apply(uploadLimiter).forRoutes({
+    consumer.apply(uploadRateLimitAuth, uploadLimiter).forRoutes({
       path: 'api/me/avatar',
       method: RequestMethod.POST,
     });
