@@ -13,7 +13,7 @@
     "test:service": "vitest run tests/service",
     "test:integration": "cross-env RUN_DB_E2E=true vitest run tests/integration --maxWorkers=1 --fileParallelism=false",
     "test:ws": "cross-env RUN_WS_E2E=true vitest run tests/ws --maxWorkers=1 --fileParallelism=false",
-    "prisma:generate": "cross-env PRISMA_GENERATE_SKIP_AUTOINSTALL=1 prisma generate --schema ../prisma/schema.prisma",
+    "prisma:generate": "node ./scripts/prisma-generate.cjs",
     "prisma:validate": "cross-env PRISMA_GENERATE_SKIP_AUTOINSTALL=1 prisma validate --schema ../prisma/schema.prisma",
     "seed": "node ../prisma/seed.js"
   },
