@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
   Param,
   Post,
   Req,
@@ -59,6 +60,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Log in with email or username' })
   @ApiBody({ type: LoginDto })
   @ApiOkResponse({ description: 'Returns access token and sets refreshToken cookie.' })
@@ -104,6 +106,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Log out and clear refresh token cookie' })
   @ApiCookieAuth(REFRESH_COOKIE)
   @ApiOkResponse({ description: 'Clears refreshToken cookie if present.' })
@@ -129,6 +132,7 @@ export class AuthController {
   }
 
   @Post('forgot-password')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Request password reset email' })
   @ApiBody({ type: ForgotPasswordDto })
   @ApiOkResponse({ description: 'Always returns a generic success message.' })
@@ -139,6 +143,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Reset password using email token' })
   @ApiBody({ type: ResetPasswordDto })
   @ApiOkResponse({ description: 'Password was updated successfully.' })
@@ -149,6 +154,7 @@ export class AuthController {
   }
 
   @Post('resend-verification')
+  @HttpCode(200)
   @ApiOperation({ summary: 'Resend verification email for the current user' })
   @ApiBearerAuth()
   @ApiOkResponse({ description: 'Verification email resend accepted.' })

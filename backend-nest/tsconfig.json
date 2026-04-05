@@ -18,7 +18,8 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "types": [
-      "node"
+      "node",
+      "vitest/globals"
     ]
   },
   "include": [

@@ -18,7 +18,7 @@ const baseDatabaseUrl = (
   process.env.DATABASE_URL || 'postgresql://postgres:password@127.0.0.1:5432/tictactoe?schema=public'
 ).replace(/"/g, '');
 
-process.env.DATABASE_URL = process.env.RUN_WS_E2E === 'true'
+process.env.DATABASE_URL = process.env.RUN_WS_E2E === 'true' || process.env.RUN_DB_E2E === 'true'
   ? baseDatabaseUrl
   : baseDatabaseUrl.replace('@postgres:', '@127.0.0.1:');
 

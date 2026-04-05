@@ -21,6 +21,10 @@ export class AppExceptionFilter implements ExceptionFilter {
     const req = ctx.getRequest<Request & { requestId?: string; user?: { id?: string; sub?: string } }>();
     const res = ctx.getResponse<Response>();
 
+    if (res.headersSent) {
+      return;
+    }
+
     const appError = this.normalizeException(exception);
     const status = appError.status || 500;
     const level = status >= 500 ? 'error' : 'warn';
