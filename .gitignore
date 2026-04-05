@@ -1,7 +1,3 @@
-# Personal documentation
-roadmap.md
-platform.md
-
 # Environment variables
 .env
 .env.local
@@ -13,18 +9,13 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# Generated
-backend/src/generated/
-
 rebuild.ps1
 
 # Uploads
-uploads/
+/uploads/
 
-#logs
-backend/logs/app.log
-
-#tests
+# tests/build/logs
 coverage/
-backend/coverage/
-backend/tests/.tmp-uploads/
+backend-nest/dist/
+backend-nest/logs/
+backend-nest/tests/.tmp-uploads/

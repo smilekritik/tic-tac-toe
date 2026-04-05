@@ -40,10 +40,43 @@ It includes:
 
 ### Backend
 - Node.js
-- Express
+- TypeScript
+- NestJS
 - Prisma
 - PostgreSQL
 - Socket.IO
 - JWT
 - Nodemailer
 - Multer
+
+## Project Structure
+
+```text
+frontend/
+backend-nest/
+prisma/
+nginx/
+uploads/
+docker-compose.dev.yml
+```
+
+## Local Development
+
+Start the full stack:
+
+```bash
+docker compose -f docker-compose.dev.yml --env-file .env up -d --build
+```
+
+Useful endpoints:
+
+- Frontend: `http://localhost:3000`
+- Nginx entrypoint: `http://localhost`
+- Swagger: `http://localhost/api-docs`
+- AsyncAPI docs: `http://localhost/asyncapi-docs`
+
+## Backend Notes
+
+- The active backend is `backend-nest/`.
+- The old JavaScript backend has been removed from the active repository layout. You can find it in separated branch.
+- Prisma schema and migrations live in `prisma/` and are shared by the backend runtime and tests.
