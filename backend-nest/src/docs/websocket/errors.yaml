@@ -1,0 +1,56 @@
+events:
+  game:error:
+    direction: receive
+    summary: Game error notifications
+    description: Error notifications with specific error codes.
+    payload:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - MATCH_NOT_FOUND
+            - NOT_A_PLAYER
+            - NOT_YOUR_TURN
+            - INVALID_MOVE
+            - UNAUTHORIZED
+        message:
+          type: string
+          description: Human-readable error message
+
+  matchmaking:error:
+    direction: receive
+    summary: Matchmaking error notifications
+    description: Error notifications for matchmaking operations.
+    payload:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - EMAIL_NOT_VERIFIED
+            - USER_NOT_ELIGIBLE
+            - UNAUTHORIZED
+        message:
+          type: string
+          description: Human-readable error message
+
+errorCodes:
+  - code: MATCH_NOT_FOUND
+    description: Match doesn't exist
+  - code: NOT_A_PLAYER
+    description: User not in this match
+  - code: NOT_YOUR_TURN
+    description: Wrong player's turn
+  - code: INVALID_MOVE
+    description: Invalid board position
+  - code: EMAIL_NOT_VERIFIED
+    description: Email verification required
+  - code: USER_NOT_ELIGIBLE
+    description: User cannot join queue
+  - code: UNAUTHORIZED
+    description: Authentication failed

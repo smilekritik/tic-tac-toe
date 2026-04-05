@@ -1,9 +1,13 @@
 import 'reflect-metadata';
+import fs from 'node:fs';
+import path from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AppConfigService } from './config/app-config.service';
+import { generateHtml, loadWebSocketDocs } from './docs/asyncapi-generator';
+import { buildOpenApiDocument } from './docs/openapi';
 import { AppLoggerService } from './logger/logger.service';
 import { PrismaService } from './prisma/prisma.service';
 
@@ -22,17 +26,30 @@ async function bootstrap(): Promise<void> {
   });
   app.use(cookieParser());
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Tic-Tac-Toe API')
-    .setDescription('NestJS migration backend for the Tic-Tac-Toe platform.')
-    .setVersion('1.1.0')
-    .build();
-  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  const swaggerDocument = buildOpenApiDocument(app, config);
   SwaggerModule.setup('api-docs', app, swaggerDocument, {
     customSiteTitle: 'Tic-Tac-Toe API Docs',
   });
-  app.getHttpAdapter().getInstance().get('/api-docs.json', (_req: unknown, res: { json: (body: unknown) => void }) => {
+  const http = app.getHttpAdapter().getInstance();
+  http.get('/api-docs.json', (_req: unknown, res: { json: (body: unknown) => void }) => {
     res.json(swaggerDocument);
+  });
+  http.get('/asyncapi-docs', (_req: unknown, res: { send: (body: unknown) => void; status: (code: number) => { send: (body: string) => void } }) => {
+    try {
+      const sections = loadWebSocketDocs();
+      const html = generateHtml(sections, `ws://localhost:${config.port}`);
+      res.send(html);
+    } catch {
+      res.status(500).send('Error generating documentation');
+    }
+  });
+  http.get('/asyncapi-docs.css', (_req: unknown, res: { type: (value: string) => void; send: (body: unknown) => void }) => {
+    res.type('text/css');
+    res.send(fs.readFileSync(path.join(__dirname, 'docs', 'asyncapi-docs.css'), 'utf8'));
+  });
+  http.get('/asyncapi-docs.js', (_req: unknown, res: { type: (value: string) => void; send: (body: unknown) => void }) => {
+    res.type('application/javascript');
+    res.send(fs.readFileSync(path.join(__dirname, 'docs', 'asyncapi-docs.js'), 'utf8'));
   });
 
   try {

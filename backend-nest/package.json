@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:smoke": "vitest run tests/smoke",
+    "test:ws": "cross-env RUN_WS_E2E=true vitest run tests/ws",
     "prisma:generate": "cross-env PRISMA_GENERATE_SKIP_AUTOINSTALL=1 prisma generate --schema ../prisma/schema.prisma",
     "prisma:validate": "cross-env PRISMA_GENERATE_SKIP_AUTOINSTALL=1 prisma validate --schema ../prisma/schema.prisma",
     "seed": "node ../prisma/seed.js"
@@ -28,6 +29,7 @@
     "cookie-parser": "^1.4.7",
     "dayjs": "^1.11.20",
     "express-rate-limit": "^7.5.1",
+    "js-yaml": "^4.1.1",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.3",
@@ -48,6 +50,7 @@
     "@types/supertest": "^6.0.3",
     "cross-env": "^10.1.0",
     "prisma": "^5.22.0",
+    "socket.io-client": "^4.8.3",
     "supertest": "^7.0.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",

@@ -1,0 +1,153 @@
+flow:
+  title: Game Flow
+  steps:
+    - After match found, client sends game:join
+    - Server responds with game:state
+    - Players take turns sending game:move
+    - Server broadcasts updated game:state after each move
+    - Game ends with game:ended
+
+events:
+  game:join:
+    direction: send
+    summary: Join or reconnect to match
+    description: Join or reconnect to an active match.
+    payload:
+      type: object
+      required:
+        - matchId
+      properties:
+        matchId:
+          type: string
+          format: uuid
+
+  game:state:
+    direction: receive
+    summary: Current game state
+    description: Current game state broadcast to all players in the match room.
+    payload:
+      type: object
+      required:
+        - board
+        - currentSymbol
+        - moveCount
+        - playerX
+        - playerO
+      properties:
+        board:
+          type: array
+          description: 3x3 game board
+          example: |
+            [
+              ["X", null, "O"],
+              [null, "X", null],
+              ["O", null, null]
+            ]
+        currentSymbol:
+          type: string
+          enum: [X, O]
+        moveCount:
+          type: integer
+        playerX:
+          type: string
+        playerO:
+          type: string
+        turnDeadlineAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Server-side UNIX timestamp in milliseconds when the current turn expires.
+        winLine:
+          type: array
+          description: Winning line coordinates (optional)
+          example: |
+            [{"x": 0, "y": 0}, {"x": 1, "y": 1}, {"x": 2, "y": 2}]
+
+  game:timer-update:
+    direction: receive
+    summary: Current turn deadline
+    description: Authoritative server deadline for the active turn.
+    payload:
+      type: object
+      required:
+        - matchId
+        - currentSymbol
+        - turnDeadlineAt
+      properties:
+        matchId:
+          type: string
+          format: uuid
+        currentSymbol:
+          type: string
+          enum: [X, O]
+        turnDeadlineAt:
+          type: integer
+          format: int64
+
+  game:move:
+    direction: send
+    summary: Make a move
+    description: Make a move in the game. Position is 0-8 in row-major order.
+    payload:
+      type: object
+      required:
+        - matchId
+        - position
+      properties:
+        matchId:
+          type: string
+          format: uuid
+        position:
+          type: integer
+          minimum: 0
+          maximum: 8
+          description: Board position (0-8, row-major order, center = 4)
+          example: 4
+
+  game:ended:
+    direction: receive
+    summary: Game ended notification
+    description: Game has ended with final result.
+    payload:
+      type: object
+      required:
+        - winnerId
+        - reason
+      properties:
+        winnerId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Winner's user ID (null for draw)
+        reason:
+          type: string
+          enum: [win, draw, timeout, abandon]
+        board:
+          type: array
+          description: Final board state
+
+  game:opponent-disconnected:
+    direction: receive
+    summary: Opponent disconnected
+    description: Opponent disconnected from the game.
+    payload:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+
+  game:opponent-reconnected:
+    direction: receive
+    summary: Opponent reconnected
+    description: Opponent reconnected to the game.
+    payload:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
