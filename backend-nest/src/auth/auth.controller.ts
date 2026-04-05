@@ -14,14 +14,28 @@ import {
 import type { Response } from 'express';
 import {
   ApiBearerAuth,
+  ApiBadRequestResponse,
   ApiBody,
+  ApiCreatedResponse,
   ApiCookieAuth,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { AppError } from '../common/errors/app-error';
+import {
+  ApiConflictErrorResponse,
+  ApiUnauthorizedErrorResponse,
+  ApiValidationErrorResponse,
+} from '../docs/openapi.decorators';
+import {
+  ErrorEnvelopeDto,
+  LoginResponseDto,
+  MessageResponseDto,
+  RefreshResponseDto,
+} from '../docs/openapi.models';
 import { CurrentUser } from './current-user.decorator';
 import { ForgotPasswordDto, LoginDto, RegistrationDto, ResetPasswordDto } from './dto/auth.dto';
 import type { AuthenticatedRequest, AuthenticatedUser } from './interfaces/authenticated-request.interface';
@@ -44,7 +58,9 @@ export class AuthController {
   @Post('registration')
   @ApiOperation({ summary: 'Register a new account' })
   @ApiBody({ type: RegistrationDto })
-  @ApiOkResponse({ description: 'Registration accepted. Verification email was sent.' })
+  @ApiCreatedResponse({ description: 'Registration accepted. Verification email was sent.', type: MessageResponseDto })
+  @ApiValidationErrorResponse()
+  @ApiConflictErrorResponse()
   @UsePipes(RegistrationValidationPipe)
   async register(
     @Body() body: RegistrationDto,
@@ -63,7 +79,9 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Log in with email or username' })
   @ApiBody({ type: LoginDto })
-  @ApiOkResponse({ description: 'Returns access token and sets refreshToken cookie.' })
+  @ApiOkResponse({ description: 'Returns access token and sets refreshToken cookie.', type: LoginResponseDto })
+  @ApiValidationErrorResponse()
+  @ApiUnauthorizedErrorResponse()
   @UsePipes(LoginValidationPipe)
   async login(
     @Body() body: LoginDto,
@@ -84,8 +102,12 @@ export class AuthController {
 
   @Get('refresh')
   @ApiOperation({ summary: 'Refresh access token using refreshToken cookie' })
-  @ApiCookieAuth(REFRESH_COOKIE)
-  @ApiOkResponse({ description: 'Returns a fresh access token and rotates refresh cookie.' })
+  @ApiCookieAuth('cookieAuth')
+  @ApiOkResponse({ description: 'Returns a fresh access token and rotates refresh cookie.', type: RefreshResponseDto })
+  @ApiUnauthorizedResponse({
+    description: 'Missing or invalid refresh token',
+    type: ErrorEnvelopeDto,
+  })
   async refresh(
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
@@ -108,8 +130,8 @@ export class AuthController {
   @Post('logout')
   @HttpCode(200)
   @ApiOperation({ summary: 'Log out and clear refresh token cookie' })
-  @ApiCookieAuth(REFRESH_COOKIE)
-  @ApiOkResponse({ description: 'Clears refreshToken cookie if present.' })
+  @ApiCookieAuth('cookieAuth')
+  @ApiOkResponse({ description: 'Clears refreshToken cookie if present.', type: MessageResponseDto })
   async logout(
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
@@ -126,7 +148,8 @@ export class AuthController {
   @Get('activate/:token')
   @ApiOperation({ summary: 'Activate account by email verification token' })
   @ApiParam({ name: 'token', description: 'Verification token from email.' })
-  @ApiOkResponse({ description: 'Email confirmed successfully.' })
+  @ApiOkResponse({ description: 'Email confirmed successfully.', type: MessageResponseDto })
+  @ApiBadRequestResponse({ description: 'Token is invalid or expired.', type: ErrorEnvelopeDto })
   async activate(@Param('token') token: string): Promise<{ message: string }> {
     return this.authService.verifyEmail(token);
   }
@@ -135,7 +158,8 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Request password reset email' })
   @ApiBody({ type: ForgotPasswordDto })
-  @ApiOkResponse({ description: 'Always returns a generic success message.' })
+  @ApiOkResponse({ description: 'Always returns a generic success message.', type: MessageResponseDto })
+  @ApiValidationErrorResponse()
   @UsePipes(ForgotPasswordValidationPipe)
   async forgotPassword(@Body() body: ForgotPasswordDto): Promise<{ message: string }> {
     await this.authService.forgotPassword(body.email);
@@ -146,7 +170,9 @@ export class AuthController {
   @HttpCode(200)
   @ApiOperation({ summary: 'Reset password using email token' })
   @ApiBody({ type: ResetPasswordDto })
-  @ApiOkResponse({ description: 'Password was updated successfully.' })
+  @ApiOkResponse({ description: 'Password was updated successfully.', type: MessageResponseDto })
+  @ApiValidationErrorResponse()
+  @ApiUnauthorizedErrorResponse()
   @UsePipes(ResetPasswordValidationPipe)
   async resetPassword(@Body() body: ResetPasswordDto): Promise<{ message: string }> {
     await this.authService.resetPassword(body.token, body.password);
@@ -156,8 +182,9 @@ export class AuthController {
   @Post('resend-verification')
   @HttpCode(200)
   @ApiOperation({ summary: 'Resend verification email for the current user' })
-  @ApiBearerAuth()
-  @ApiOkResponse({ description: 'Verification email resend accepted.' })
+  @ApiBearerAuth('bearerAuth')
+  @ApiOkResponse({ description: 'Verification email resend accepted.', type: MessageResponseDto })
+  @ApiUnauthorizedErrorResponse()
   @UseGuards(JwtAuthGuard)
   async resendVerification(@CurrentUser() user?: AuthenticatedUser): Promise<{ message: string }> {
     const userId = user?.sub || user?.id;

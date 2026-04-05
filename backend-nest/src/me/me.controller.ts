@@ -15,9 +15,11 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
   ApiConsumes,
+  ApiCreatedResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
@@ -30,6 +32,21 @@ import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-request.interface';
+import {
+  ApiConflictErrorResponse,
+  ApiNotFoundErrorResponse,
+  ApiUnauthorizedErrorResponse,
+  ApiValidationErrorResponse,
+} from '../docs/openapi.decorators';
+import {
+  AvatarUploadResponseDto,
+  CurrentUserResponseDto,
+  ErrorEnvelopeDto,
+  MessageResponseDto,
+  UserIdentityDto,
+  UserProfileDto,
+  UsernameAvailabilityResponseDto,
+} from '../docs/openapi.models';
 import {
   ChangePasswordDto,
   DeleteAccountDto,
@@ -58,15 +75,19 @@ export class MeController {
   @Get('email/confirm/:token')
   @ApiOperation({ summary: 'Confirm pending email change' })
   @ApiParam({ name: 'token', description: 'Email change confirmation token.' })
-  @ApiOkResponse({ description: 'Email address updated successfully.' })
+  @ApiOkResponse({ description: 'Email address updated successfully.', type: MessageResponseDto })
+  @ApiBadRequestResponse({ description: 'Token is invalid or expired.', type: ErrorEnvelopeDto })
+  @ApiConflictErrorResponse()
   async confirmEmailChange(@Param('token') token: string): Promise<{ message: string }> {
     return this.meService.confirmEmailChange(token);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiBearerAuth()
-  @ApiOkResponse({ description: 'Returns current user profile, settings, and ratings.' })
+  @ApiBearerAuth('bearerAuth')
+  @ApiOkResponse({ description: 'Returns current user profile, settings, and ratings.', type: CurrentUserResponseDto })
+  @ApiUnauthorizedErrorResponse()
+  @ApiNotFoundErrorResponse()
   @UseGuards(JwtAuthGuard)
   async getMe(@CurrentUser() user?: AuthenticatedUser): Promise<Record<string, unknown>> {
     return this.meService.getMe(this.getUserId(user));
@@ -74,9 +95,11 @@ export class MeController {
 
   @Get('username-availability')
   @ApiOperation({ summary: 'Check whether a username is available' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('bearerAuth')
   @ApiQuery({ name: 'username', description: 'Username to validate.' })
-  @ApiOkResponse({ description: 'Returns requested username and availability flag.' })
+  @ApiOkResponse({ description: 'Returns requested username and availability flag.', type: UsernameAvailabilityResponseDto })
+  @ApiUnauthorizedErrorResponse()
+  @ApiValidationErrorResponse()
   @UseGuards(JwtAuthGuard)
   async checkUsernameAvailability(
     @CurrentUser() user?: AuthenticatedUser,
@@ -87,9 +110,12 @@ export class MeController {
 
   @Patch('settings')
   @ApiOperation({ summary: 'Update current user settings' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('bearerAuth')
   @ApiBody({ type: UpdateSettingsDto })
-  @ApiOkResponse({ description: 'Returns updated current user profile payload.' })
+  @ApiOkResponse({ description: 'Returns updated current user profile payload.', type: CurrentUserResponseDto })
+  @ApiUnauthorizedErrorResponse()
+  @ApiValidationErrorResponse()
+  @ApiConflictErrorResponse()
   @UseGuards(JwtAuthGuard)
   async updateSettings(
     @CurrentUser() user?: AuthenticatedUser,
@@ -100,9 +126,10 @@ export class MeController {
 
   @Patch('profile')
   @ApiOperation({ summary: 'Update profile visibility and UI preferences' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('bearerAuth')
   @ApiBody({ type: UpdateProfileDto })
-  @ApiOkResponse({ description: 'Returns updated current user profile payload.' })
+  @ApiOkResponse({ description: 'Returns updated profile record.', type: UserProfileDto })
+  @ApiUnauthorizedErrorResponse()
   @UseGuards(JwtAuthGuard)
   async updateProfile(
     @CurrentUser() user?: AuthenticatedUser,
@@ -113,9 +140,12 @@ export class MeController {
 
   @Patch('username')
   @ApiOperation({ summary: 'Change current username' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('bearerAuth')
   @ApiBody({ type: UpdateUsernameDto })
-  @ApiOkResponse({ description: 'Returns updated current user profile payload.' })
+  @ApiOkResponse({ description: 'Returns updated user identity fields.', type: UserIdentityDto })
+  @ApiUnauthorizedErrorResponse()
+  @ApiValidationErrorResponse()
+  @ApiConflictErrorResponse()
   @UseGuards(JwtAuthGuard)
   async updateUsername(
     @CurrentUser() user?: AuthenticatedUser,
@@ -126,9 +156,12 @@ export class MeController {
 
   @Patch('email')
   @ApiOperation({ summary: 'Request email change confirmation flow' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('bearerAuth')
   @ApiBody({ type: RequestEmailChangeDto })
-  @ApiOkResponse({ description: 'Confirmation email was sent to the new address.' })
+  @ApiOkResponse({ description: 'Confirmation email was sent to the new address.', type: MessageResponseDto })
+  @ApiUnauthorizedErrorResponse()
+  @ApiValidationErrorResponse()
+  @ApiConflictErrorResponse()
   @UseGuards(JwtAuthGuard)
   async requestEmailChange(
     @CurrentUser() user?: AuthenticatedUser,
@@ -139,9 +172,11 @@ export class MeController {
 
   @Patch('password')
   @ApiOperation({ summary: 'Change current password' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('bearerAuth')
   @ApiBody({ type: ChangePasswordDto })
-  @ApiOkResponse({ description: 'Password changed and refresh sessions revoked as needed.' })
+  @ApiOkResponse({ description: 'Password changed and refresh sessions revoked as needed.', type: MessageResponseDto })
+  @ApiUnauthorizedErrorResponse()
+  @ApiValidationErrorResponse()
   @UseGuards(JwtAuthGuard)
   async changePassword(
     @CurrentUser() user?: AuthenticatedUser,
@@ -152,7 +187,7 @@ export class MeController {
 
   @Post('avatar')
   @ApiOperation({ summary: 'Upload avatar image' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('bearerAuth')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -167,7 +202,9 @@ export class MeController {
       },
     },
   })
-  @ApiOkResponse({ description: 'Returns the stored avatar path.' })
+  @ApiCreatedResponse({ description: 'Returns the stored avatar path.', type: AvatarUploadResponseDto })
+  @ApiUnauthorizedErrorResponse()
+  @ApiBadRequestResponse({ description: 'Invalid or missing file.', type: ErrorEnvelopeDto })
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('avatar', {
     storage: multer.memoryStorage(),
@@ -189,9 +226,11 @@ export class MeController {
 
   @Delete()
   @ApiOperation({ summary: 'Delete current account' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('bearerAuth')
   @ApiBody({ type: DeleteAccountDto })
   @ApiNoContentResponse({ description: 'Account deleted and refresh cookie cleared.' })
+  @ApiUnauthorizedErrorResponse()
+  @ApiValidationErrorResponse()
   @HttpCode(204)
   @UseGuards(JwtAuthGuard)
   async deleteAccount(

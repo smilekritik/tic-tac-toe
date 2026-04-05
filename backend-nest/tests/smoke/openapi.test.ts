@@ -24,9 +24,17 @@ describe('openapi smoke', () => {
     const config = app.get(AppConfigService);
     const document = buildOpenApiDocument(app, config);
 
-    expect(document.openapi).toBe('3.0.0');
+    expect(document.openapi).toBe('3.1.0');
     expect(Object.keys(document.paths || {})).not.toHaveLength(0);
     expect(document.paths['/api/auth/login']).toBeDefined();
     expect(document.paths['/api/game/active']).toBeDefined();
+    expect(document.components?.securitySchemes?.bearerAuth).toBeDefined();
+    expect(document.components?.securitySchemes?.cookieAuth).toBeDefined();
+    expect(document.components?.responses?.Unauthorized).toBeDefined();
+    expect(document.paths['/api/me']?.get?.responses?.['200']).toBeDefined();
+    expect(
+      (document.paths['/api/me']?.get?.responses?.['200'] as { content?: Record<string, { schema?: { $ref?: string } }> })
+        ?.content?.['application/json']?.schema?.$ref,
+    ).toBe('#/components/schemas/CurrentUserResponseDto');
   });
 });

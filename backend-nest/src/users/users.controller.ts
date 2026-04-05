@@ -1,5 +1,7 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiForbiddenErrorResponse, ApiNotFoundErrorResponse } from '../docs/openapi.decorators';
+import { PublicUserProfileDto } from '../docs/openapi.models';
 import { UsersService } from './users.service';
 
 @ApiTags('Users')
@@ -10,7 +12,9 @@ export class UsersController {
   @Get(':username')
   @ApiOperation({ summary: 'Get public profile by username' })
   @ApiParam({ name: 'username', description: 'Public username.' })
-  @ApiOkResponse({ description: 'Returns public profile data if profile visibility allows it.' })
+  @ApiOkResponse({ description: 'Returns public profile data if profile visibility allows it.', type: PublicUserProfileDto })
+  @ApiNotFoundErrorResponse()
+  @ApiForbiddenErrorResponse()
   async getPublicProfile(@Param('username') username: string): Promise<Record<string, unknown>> {
     return this.usersService.getPublicProfile(username);
   }

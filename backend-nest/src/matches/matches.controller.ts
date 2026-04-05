@@ -11,6 +11,12 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import type { AuthenticatedUser } from '../auth/interfaces/authenticated-request.interface';
+import {
+  ApiForbiddenErrorResponse,
+  ApiNotFoundErrorResponse,
+  ApiUnauthorizedErrorResponse,
+} from '../docs/openapi.decorators';
+import { MatchDetailsResponseDto, MatchHistoryResponseDto } from '../docs/openapi.models';
 import { MatchesService } from './matches.service';
 
 @ApiTags('Matches')
@@ -20,11 +26,12 @@ export class MatchesController {
 
   @Get('me/matches')
   @ApiOperation({ summary: 'Get current user match history' })
-  @ApiBearerAuth()
+  @ApiBearerAuth('bearerAuth')
   @ApiQuery({ name: 'cursor', required: false, description: 'Pagination cursor.' })
   @ApiQuery({ name: 'limit', required: false, description: 'Page size.' })
   @ApiQuery({ name: 'mode', required: false, description: 'Game mode filter.' })
-  @ApiOkResponse({ description: 'Returns paginated match history for the current user.' })
+  @ApiOkResponse({ description: 'Returns paginated match history for the current user.', type: MatchHistoryResponseDto })
+  @ApiUnauthorizedErrorResponse()
   @UseGuards(JwtAuthGuard)
   async getMyMatches(
     @CurrentUser() user?: AuthenticatedUser,
@@ -40,7 +47,9 @@ export class MatchesController {
   @ApiQuery({ name: 'cursor', required: false, description: 'Pagination cursor.' })
   @ApiQuery({ name: 'limit', required: false, description: 'Page size.' })
   @ApiQuery({ name: 'mode', required: false, description: 'Game mode filter.' })
-  @ApiOkResponse({ description: 'Returns public match history if profile privacy allows it.' })
+  @ApiOkResponse({ description: 'Returns public match history if profile privacy allows it.', type: MatchHistoryResponseDto })
+  @ApiNotFoundErrorResponse()
+  @ApiForbiddenErrorResponse()
   async getUserMatches(
     @Param('username') username: string,
     @Query() query?: Record<string, string | string[] | undefined>,
@@ -51,7 +60,9 @@ export class MatchesController {
   @Get('matches/:matchId')
   @ApiOperation({ summary: 'Get match details by id' })
   @ApiParam({ name: 'matchId', description: 'Match identifier.' })
-  @ApiOkResponse({ description: 'Returns persisted match details and reconstructed final state.' })
+  @ApiOkResponse({ description: 'Returns persisted match details and reconstructed final state.', type: MatchDetailsResponseDto })
+  @ApiNotFoundErrorResponse()
+  @ApiForbiddenErrorResponse()
   @UseGuards(OptionalJwtAuthGuard)
   async getMatchDetails(
     @Param('matchId') matchId: string,
