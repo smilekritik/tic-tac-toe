@@ -40,7 +40,8 @@ It includes:
 
 ### Backend
 - Node.js
-- Express
+- TypeScript
+- NestJS
 - Prisma
 - PostgreSQL
 - Socket.IO

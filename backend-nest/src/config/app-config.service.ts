@@ -29,7 +29,7 @@ type SecurityConfig = {
 @Injectable()
 export class AppConfigService {
   readonly nodeEnv = process.env.NODE_ENV || 'development';
-  readonly port = this.parseInt('PORT', 5001);
+  readonly port = this.parseInt('PORT', 5000);
   readonly frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   readonly databaseUrl = process.env.DATABASE_URL;
   readonly logLevel = process.env.LOG_LEVEL || 'info';
