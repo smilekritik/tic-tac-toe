@@ -5,6 +5,7 @@ import { AppConfigService } from '../../config/app-config.service';
 import { AppLoggerService } from '../../logger/logger.service';
 import { RequestContextService } from '../../context/request-context.service';
 import { AppError } from '../errors/app-error';
+import { nowMs } from '../time/dayjs';
 
 type LimiterOptions = {
   windowMs: number;
@@ -81,7 +82,7 @@ export class BusinessRateLimitService {
     minIntervalMs?: number;
   }): void {
     const timestamps = this.buckets.get(options.key) || [];
-    const now = Date.now();
+    const now = nowMs();
 
     if (options.minIntervalMs && timestamps.length) {
       const delta = now - timestamps[timestamps.length - 1];

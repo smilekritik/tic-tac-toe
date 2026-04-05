@@ -8,6 +8,7 @@ import {
   isEmailVerificationExpired,
 } from '../common/helpers/email-verification-window';
 import { BusinessRateLimitService } from '../common/rate-limit/rate-limit';
+import { addMilliseconds, isBeforeNow, nowDate } from '../common/time/dayjs';
 import { AppConfigService } from '../config/app-config.service';
 import { MailService } from '../mail/mail.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -166,7 +167,7 @@ export class MeService {
 
     await this.prisma.userEmailChange.updateMany({
       where: { userId, confirmedAt: null },
-      data: { confirmedAt: new Date() },
+      data: { confirmedAt: nowDate() },
     });
 
     const record = await this.prisma.userEmailChange.create({
@@ -174,7 +175,7 @@ export class MeService {
         userId,
         newEmail,
         token: crypto.randomBytes(32).toString('hex'),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: addMilliseconds(nowDate(), 24 * 60 * 60 * 1000).toDate(),
       },
     });
 
@@ -228,7 +229,7 @@ export class MeService {
       throw new AppError('TOKEN_INVALID', 400);
     }
 
-    if (record.expiresAt < new Date()) {
+    if (isBeforeNow(record.expiresAt)) {
       throw new AppError('TOKEN_EXPIRED', 400);
     }
 
@@ -245,7 +246,7 @@ export class MeService {
         throw new AppError('EMAIL_TAKEN', 409);
       }
 
-      const now = new Date();
+      const now = nowDate();
 
       await tx.user.update({
         where: { id: record.userId },
@@ -328,7 +329,7 @@ export class MeService {
       }),
       this.prisma.refreshToken.updateMany({
         where: { userId },
-        data: { revokedAt: new Date() },
+        data: { revokedAt: nowDate() },
       }),
     ]);
 

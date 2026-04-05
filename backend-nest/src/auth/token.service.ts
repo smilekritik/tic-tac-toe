@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
+import { addMilliseconds, nowDate } from '../common/time/dayjs';
 import { AppConfigService } from '../config/app-config.service';
 
 type TokenUser = {
@@ -29,7 +30,7 @@ export class TokenService {
     const token = crypto.randomBytes(40).toString('hex');
     const hash = this.hashToken(token);
     const expirationMs = this.parseRefreshExpiration(this.config.jwt.refreshExpiration);
-    const expiresAt = new Date(Date.now() + expirationMs);
+    const expiresAt = addMilliseconds(nowDate(), expirationMs).toDate();
     return { token, hash, expiresAt };
   }
 

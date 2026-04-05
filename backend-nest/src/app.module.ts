@@ -19,6 +19,9 @@ import { RequestContextService } from './context/request-context.service';
 import { MailModule } from './mail/mail.module';
 import { MeController } from './me/me.controller';
 import { MeModule } from './me/me.module';
+import { UsersModule } from './users/users.module';
+import { MatchesModule } from './matches/matches.module';
+import { LeaderboardModule } from './leaderboard/leaderboard.module';
 
 @Module({
   imports: [
@@ -36,6 +39,9 @@ import { MeModule } from './me/me.module';
     MailModule,
     AuthModule,
     MeModule,
+    UsersModule,
+    MatchesModule,
+    LeaderboardModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import crypto from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
+import { nowMs } from '../common/time/dayjs';
 import { RequestContextService } from './request-context.service';
 
 @Injectable()
@@ -14,7 +15,7 @@ export class RequestContextMiddleware implements NestMiddleware {
       ip: req.ip,
       method: req.method,
       route: req.originalUrl || req.url,
-      startTime: Date.now(),
+      startTime: nowMs(),
     };
 
     (req as Request & { requestId?: string }).requestId = requestId;

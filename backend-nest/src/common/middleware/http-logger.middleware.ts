@@ -2,6 +2,7 @@ import { Injectable, NestMiddleware } from '@nestjs/common';
 import type { NextFunction, Request, Response } from 'express';
 import { RequestContextService } from '../../context/request-context.service';
 import { AppLoggerService } from '../../logger/logger.service';
+import { nowMs } from '../time/dayjs';
 
 const SENSITIVE_KEYS = ['password', 'newPassword', 'token', 'refreshToken', 'accessToken'];
 
@@ -34,7 +35,7 @@ export class HttpLoggerMiddleware implements NestMiddleware {
   ) {}
 
   use(req: Request & { requestId?: string; user?: { id?: string; sub?: string } }, res: Response, next: NextFunction): void {
-    const start = Date.now();
+    const start = nowMs();
 
     this.logger.getLogger('http').info(
       {
@@ -68,7 +69,7 @@ export class HttpLoggerMiddleware implements NestMiddleware {
             event: 'request_finish',
             requestId: req.requestId,
             statusCode: res.statusCode,
-            durationMs: Date.now() - start,
+            durationMs: nowMs() - start,
             ip: req.ip,
             method: req.method,
             route: req.originalUrl || req.url,

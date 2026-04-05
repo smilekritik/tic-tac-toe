@@ -4,6 +4,7 @@ import { MailModule } from '../mail/mail.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { OptionalJwtAuthGuard } from './optional-jwt-auth.guard';
 import {
   ForgotPasswordValidationPipe,
   LoginValidationPipe,
@@ -20,11 +21,12 @@ import { TokenService } from './token.service';
     AuthService,
     TokenService,
     JwtAuthGuard,
+    OptionalJwtAuthGuard,
     RegistrationValidationPipe,
     LoginValidationPipe,
     ForgotPasswordValidationPipe,
     ResetPasswordValidationPipe,
   ],
-  exports: [TokenService, JwtAuthGuard],
+  exports: [TokenService, JwtAuthGuard, OptionalJwtAuthGuard],
 })
 export class AuthModule {}

@@ -9,6 +9,12 @@ import {
   isEmailVerificationExpired,
 } from '../common/helpers/email-verification-window';
 import { BusinessRateLimitService } from '../common/rate-limit/rate-limit';
+import {
+  addMilliseconds,
+  isBeforeNow,
+  nowDate,
+  subtractMilliseconds,
+} from '../common/time/dayjs';
 import { AppConfigService } from '../config/app-config.service';
 import { AppLoggerService } from '../logger/logger.service';
 import { MailService } from '../mail/mail.service';
@@ -68,7 +74,7 @@ export class AuthService {
       data: {
         userId: user.id,
         token: crypto.randomBytes(32).toString('hex'),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: addMilliseconds(nowDate(), 24 * 60 * 60 * 1000).toDate(),
       },
     });
 
@@ -188,7 +194,7 @@ export class AuthService {
       where: { tokenHash: hash, revokedAt: null },
     });
 
-    if (!stored || stored.expiresAt < new Date()) {
+    if (!stored || isBeforeNow(stored.expiresAt)) {
       throw new AppError('TOKEN_INVALID', 401);
     }
 
@@ -203,7 +209,7 @@ export class AuthService {
     if (isEmailVerificationExpired(user)) {
       await this.prisma.refreshToken.updateMany({
         where: { userId: user.id },
-        data: { revokedAt: new Date() },
+        data: { revokedAt: nowDate() },
       });
       await this.prisma.$transaction(async (tx) => {
         await deleteUsersWithRelations(tx, [user.id]);
@@ -218,7 +224,7 @@ export class AuthService {
 
     await this.prisma.refreshToken.update({
       where: { id: stored.id },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: nowDate() },
     });
 
     const nextRefresh = this.tokenService.generateRefreshToken();
@@ -251,7 +257,7 @@ export class AuthService {
     const hash = this.tokenService.hashToken(refreshToken);
     await this.prisma.refreshToken.updateMany({
       where: { tokenHash: hash },
-      data: { revokedAt: new Date() },
+      data: { revokedAt: nowDate() },
     });
   }
 
@@ -260,7 +266,7 @@ export class AuthService {
       where: { token },
     });
 
-    if (!record || record.expiresAt < new Date()) {
+    if (!record || isBeforeNow(record.expiresAt)) {
       throw new AppError('TOKEN_INVALID', 400);
     }
 
@@ -278,7 +284,7 @@ export class AuthService {
 
     await this.prisma.emailVerificationToken.update({
       where: { token },
-      data: { usedAt: new Date() },
+      data: { usedAt: nowDate() },
     });
 
     await this.prisma.user.update({
@@ -311,14 +317,14 @@ export class AuthService {
 
     await this.prisma.passwordResetToken.updateMany({
       where: { userId: user.id, usedAt: null },
-      data: { usedAt: new Date() },
+      data: { usedAt: nowDate() },
     });
 
     const record = await this.prisma.passwordResetToken.create({
       data: {
         userId: user.id,
         token: crypto.randomBytes(32).toString('hex'),
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        expiresAt: addMilliseconds(nowDate(), 60 * 60 * 1000).toDate(),
       },
     });
 
@@ -336,7 +342,7 @@ export class AuthService {
       where: { token },
     });
 
-    if (!record || record.usedAt || record.expiresAt < new Date()) {
+    if (!record || record.usedAt || isBeforeNow(record.expiresAt)) {
       throw new AppError('TOKEN_EXPIRED', 400);
     }
 
@@ -347,7 +353,7 @@ export class AuthService {
     });
     await this.prisma.passwordResetToken.update({
       where: { token },
-      data: { usedAt: new Date() },
+      data: { usedAt: nowDate() },
     });
   }
 
@@ -380,14 +386,14 @@ export class AuthService {
 
     await this.prisma.emailVerificationToken.updateMany({
       where: { userId: user.id, usedAt: null },
-      data: { usedAt: new Date() },
+      data: { usedAt: nowDate() },
     });
 
     const verifyToken = await this.prisma.emailVerificationToken.create({
       data: {
         userId: user.id,
         token: crypto.randomBytes(32).toString('hex'),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        expiresAt: addMilliseconds(nowDate(), 24 * 60 * 60 * 1000).toDate(),
       },
     });
 
@@ -403,7 +409,7 @@ export class AuthService {
   }
 
   private async cleanupExpiredUnverifiedUsers(): Promise<void> {
-    const cutoff = new Date(Date.now() - EMAIL_VERIFICATION_GRACE_MS);
+    const cutoff = subtractMilliseconds(nowDate(), EMAIL_VERIFICATION_GRACE_MS).toDate();
     const expiredUsers = await this.prisma.user.findMany({
       where: {
         emailVerified: false,
