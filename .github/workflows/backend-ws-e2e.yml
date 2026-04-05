@@ -44,8 +44,12 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: backend-nest/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            backend-nest/package-lock.json
 
+      - run: npm ci
+        working-directory: .
       - run: npm ci
       - run: npm run prisma:generate
       - run: npx prisma migrate deploy --schema ../prisma/schema.prisma
