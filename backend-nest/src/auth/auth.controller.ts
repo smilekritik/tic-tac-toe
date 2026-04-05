@@ -11,6 +11,15 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiCookieAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AppError } from '../common/errors/app-error';
 import { CurrentUser } from './current-user.decorator';
 import { ForgotPasswordDto, LoginDto, RegistrationDto, ResetPasswordDto } from './dto/auth.dto';
@@ -26,11 +35,15 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 
 const REFRESH_COOKIE = 'refreshToken';
 
+@ApiTags('Auth')
 @Controller('api/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('registration')
+  @ApiOperation({ summary: 'Register a new account' })
+  @ApiBody({ type: RegistrationDto })
+  @ApiOkResponse({ description: 'Registration accepted. Verification email was sent.' })
   @UsePipes(RegistrationValidationPipe)
   async register(
     @Body() body: RegistrationDto,
@@ -46,6 +59,9 @@ export class AuthController {
   }
 
   @Post('login')
+  @ApiOperation({ summary: 'Log in with email or username' })
+  @ApiBody({ type: LoginDto })
+  @ApiOkResponse({ description: 'Returns access token and sets refreshToken cookie.' })
   @UsePipes(LoginValidationPipe)
   async login(
     @Body() body: LoginDto,
@@ -65,6 +81,9 @@ export class AuthController {
   }
 
   @Get('refresh')
+  @ApiOperation({ summary: 'Refresh access token using refreshToken cookie' })
+  @ApiCookieAuth(REFRESH_COOKIE)
+  @ApiOkResponse({ description: 'Returns a fresh access token and rotates refresh cookie.' })
   async refresh(
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
@@ -85,6 +104,9 @@ export class AuthController {
   }
 
   @Post('logout')
+  @ApiOperation({ summary: 'Log out and clear refresh token cookie' })
+  @ApiCookieAuth(REFRESH_COOKIE)
+  @ApiOkResponse({ description: 'Clears refreshToken cookie if present.' })
   async logout(
     @Req() req: AuthenticatedRequest,
     @Res({ passthrough: true }) res: Response,
@@ -99,11 +121,17 @@ export class AuthController {
   }
 
   @Get('activate/:token')
+  @ApiOperation({ summary: 'Activate account by email verification token' })
+  @ApiParam({ name: 'token', description: 'Verification token from email.' })
+  @ApiOkResponse({ description: 'Email confirmed successfully.' })
   async activate(@Param('token') token: string): Promise<{ message: string }> {
     return this.authService.verifyEmail(token);
   }
 
   @Post('forgot-password')
+  @ApiOperation({ summary: 'Request password reset email' })
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiOkResponse({ description: 'Always returns a generic success message.' })
   @UsePipes(ForgotPasswordValidationPipe)
   async forgotPassword(@Body() body: ForgotPasswordDto): Promise<{ message: string }> {
     await this.authService.forgotPassword(body.email);
@@ -111,6 +139,9 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password using email token' })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiOkResponse({ description: 'Password was updated successfully.' })
   @UsePipes(ResetPasswordValidationPipe)
   async resetPassword(@Body() body: ResetPasswordDto): Promise<{ message: string }> {
     await this.authService.resetPassword(body.token, body.password);
@@ -118,6 +149,9 @@ export class AuthController {
   }
 
   @Post('resend-verification')
+  @ApiOperation({ summary: 'Resend verification email for the current user' })
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'Verification email resend accepted.' })
   @UseGuards(JwtAuthGuard)
   async resendVerification(@CurrentUser() user?: AuthenticatedUser): Promise<{ message: string }> {
     const userId = user?.sub || user?.id;
