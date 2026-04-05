@@ -19,30 +19,6 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    profiles:
-      - legacy
-    build:
-      context: .
-      dockerfile: ./backend/Dockerfile
-    container_name: tictactoe-backend
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "5001:5000"
-      - "5555:5555"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-      - ./prisma:/app/prisma
-      - ./uploads:/app/uploads
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - tictactoe-network
-
   backend-nest:
     build:
       context: .
