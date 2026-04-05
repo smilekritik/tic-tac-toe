@@ -23,8 +23,8 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./backend/Dockerfile
     container_name: tictactoe-backend
     restart: unless-stopped
     env_file:
@@ -35,6 +35,30 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - ./prisma:/app/prisma
+      - ./uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tictactoe-network
+
+  backend-nest:
+    build:
+      context: .
+      dockerfile: ./backend-nest/Dockerfile
+    container_name: tictactoe-backend-nest
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: 5001
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./backend-nest:/app
+      - /app/node_modules
+      - ./prisma:/app/prisma
       - ./uploads:/app/uploads
     depends_on:
       postgres:

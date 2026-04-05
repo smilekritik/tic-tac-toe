@@ -1,0 +1,31 @@
+{
+  "mail": {
+    "common": {
+      "appName": "Tic-Tac-Toe",
+      "greeting": "Hello,",
+      "ignoreText": "If you did not expect this message, you can safely ignore it.",
+      "alternativeText": "If the button does not work, open this link:"
+    },
+    "verify": {
+      "subject": "Verify your email",
+      "title": "Confirm your email",
+      "intro": "Please confirm your email address to finish activating your account.",
+      "button": "Confirm email",
+      "footer": "See you in the game."
+    },
+    "reset": {
+      "subject": "Reset your password",
+      "title": "Reset your password",
+      "intro": "Use the button below to choose a new password for your account.",
+      "button": "Reset password",
+      "footer": "If you requested this, you can continue safely."
+    },
+    "emailChange": {
+      "subject": "Confirm your new email",
+      "title": "Confirm your new email",
+      "intro": "Please confirm this new email address to update your account settings.",
+      "button": "Confirm new email",
+      "footer": "Your email will be changed after confirmation."
+    }
+  }
+}

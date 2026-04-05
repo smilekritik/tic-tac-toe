@@ -1,0 +1,10 @@
+{
+  "name": "tic-tac-toe-workspace",
+  "private": true,
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0"
+  }
+}

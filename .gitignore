@@ -28,3 +28,6 @@ backend/logs/app.log
 coverage/
 backend/coverage/
 backend/tests/.tmp-uploads/
+backend-nest/dist/
+backend-nest/logs/
+backend-nest/tests/.tmp-uploads/

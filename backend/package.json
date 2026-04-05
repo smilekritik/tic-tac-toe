@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "seed": "node prisma/seed.js",
+    "seed": "node ../prisma/seed.js",
+    "prisma:generate": "cross-env PRISMA_GENERATE_SKIP_AUTOINSTALL=1 prisma generate --schema ../prisma/schema.prisma",
+    "prisma:validate": "cross-env PRISMA_GENERATE_SKIP_AUTOINSTALL=1 prisma validate --schema ../prisma/schema.prisma",
     "test": "npm run test:unit",
     "test:unit": "cross-env NODE_OPTIONS=--require=./tests/setup/unit.setup.js vitest run --globals --environment node --pool threads tests/unit",
     "test:service": "cross-env NODE_OPTIONS=--require=./tests/setup/unit.setup.js vitest run --globals --environment node --pool threads tests/service",
@@ -13,7 +15,7 @@
     "test:integration": "cross-env NODE_OPTIONS=--require=./tests/setup/integration.setup.js vitest run --globals --environment node --pool threads --no-file-parallelism tests/integration",
     "test:ws": "cross-env NODE_OPTIONS=--require=./tests/setup/ws.setup.js vitest run --globals --environment node --pool threads --no-file-parallelism tests/ws",
     "test:coverage": "cross-env NODE_OPTIONS=--require=./tests/setup/unit.setup.js vitest run --globals --environment node --pool threads --coverage --coverage.provider v8 --coverage.reporter text --coverage.reporter html --coverage.include src/**/*.js --coverage.exclude src/docs/**/*.css --coverage.exclude src/docs/**/*.js tests/unit tests/smoke",
-    "ci:backend": "cross-env DATABASE_URL=postgresql://test:test@localhost:5432/tictactoe_test npx prisma generate && cross-env DATABASE_URL=postgresql://test:test@localhost:5432/tictactoe_test npx prisma validate && npm run test:smoke && npm run test:unit",
+    "ci:backend": "cross-env DATABASE_URL=postgresql://test:test@localhost:5432/tictactoe_test npm run prisma:generate && cross-env DATABASE_URL=postgresql://test:test@localhost:5432/tictactoe_test npm run prisma:validate && npm run test:smoke && npm run test:unit",
     "ci:backend:db": "node ./scripts/run-db-tests.js",
     "ci:backend:ws": "node ./scripts/run-ws-tests.js"
   },

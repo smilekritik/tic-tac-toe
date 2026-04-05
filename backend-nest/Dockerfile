@@ -4,17 +4,16 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-RUN npm install -g nodemon
-
-COPY backend/package*.json ./
+COPY backend-nest/package*.json ./
 
 RUN npm install
 
-COPY backend/ .
+COPY backend-nest/ .
 COPY prisma /app/prisma
 
 RUN npx prisma generate --schema /app/prisma/schema.prisma
+RUN npm run build
 
-EXPOSE 5000
+EXPOSE 5001
 
 CMD ["npm", "run", "dev"]

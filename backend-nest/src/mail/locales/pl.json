@@ -1,0 +1,31 @@
+{
+  "mail": {
+    "common": {
+      "appName": "Tic-Tac-Toe",
+      "greeting": "Cześć,",
+      "ignoreText": "Jeśli nie oczekiwałeś tej wiadomości, możesz ją bezpiecznie zignorować.",
+      "alternativeText": "Jeśli przycisk nie działa, otwórz ten link:"
+    },
+    "verify": {
+      "subject": "Potwierdź email",
+      "title": "Potwierdź email",
+      "intro": "Potwierdź adres email, aby dokończyć aktywację konta.",
+      "button": "Potwierdź email",
+      "footer": "Do zobaczenia w grze."
+    },
+    "reset": {
+      "subject": "Resetuj hasło",
+      "title": "Reset hasła",
+      "intro": "Użyj przycisku poniżej, aby ustawić nowe hasło do swojego konta.",
+      "button": "Resetuj hasło",
+      "footer": "Jeśli to Ty wysłałeś prośbę, możesz bezpiecznie kontynuować."
+    },
+    "emailChange": {
+      "subject": "Potwierdź nowy email",
+      "title": "Potwierdź nowy email",
+      "intro": "Potwierdź nowy adres email, aby zaktualizować ustawienia konta.",
+      "button": "Potwierdź nowy email",
+      "footer": "Adres email zostanie zmieniony po potwierdzeniu."
+    }
+  }
+}
