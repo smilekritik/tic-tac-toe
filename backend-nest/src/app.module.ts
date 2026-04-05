@@ -17,6 +17,8 @@ import { UploadsModule } from './uploads/uploads.module';
 import { AppConfigService } from './config/app-config.service';
 import { RequestContextService } from './context/request-context.service';
 import { MailModule } from './mail/mail.module';
+import { MeController } from './me/me.controller';
+import { MeModule } from './me/me.module';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { MailModule } from './mail/mail.module';
     UploadsModule,
     MailModule,
     AuthModule,
+    MeModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -80,12 +83,31 @@ export class AppModule implements NestModule {
       this.logger,
       this.requestContext,
     );
+    const uploadLimiter = createRateLimiter(
+      {
+        windowMs: this.config.security.uploadRateLimitWindowMs,
+        max: this.config.security.uploadRateLimitMax,
+        keyGenerator: (req) => {
+          const user = req as typeof req & { user?: { sub?: string; id?: string } };
+          const userId = user.user?.sub || user.user?.id;
+          return userId ? `user:${userId}` : `ip:${req.ip}`;
+        },
+        code: 'UPLOAD_RATE_LIMIT',
+        message: 'Too many uploads',
+      },
+      this.logger,
+      this.requestContext,
+    );
 
     consumer.apply(RequestContextMiddleware).forRoutes('*');
     consumer.apply(HttpLoggerMiddleware).forRoutes('*');
     consumer.apply(apiLimiter, authLimiter).forRoutes(AuthController);
     consumer.apply(loginLimiter).forRoutes({
       path: 'api/auth/login',
+      method: RequestMethod.POST,
+    });
+    consumer.apply(uploadLimiter).forRoutes({
+      path: 'api/me/avatar',
       method: RequestMethod.POST,
     });
   }

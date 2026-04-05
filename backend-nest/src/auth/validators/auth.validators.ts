@@ -15,7 +15,7 @@ export function normalizeEmail(value: unknown): unknown {
   return value.trim().toLowerCase();
 }
 
-function normalizeUsername(value: unknown): unknown {
+export function normalizeUsername(value: unknown): unknown {
   if (typeof value !== 'string') {
     return value;
   }
@@ -23,7 +23,7 @@ function normalizeUsername(value: unknown): unknown {
   return value.trim().toLowerCase();
 }
 
-function validateEmail(value: unknown, errors: ValidationFieldError[], field = 'email'): string {
+export function validateEmail(value: unknown, errors: ValidationFieldError[], field = 'email'): string {
   const email = normalizeEmail(value);
   if (typeof email !== 'string' || !email.length) {
     addError(errors, field, 'Email is required');
@@ -36,7 +36,7 @@ function validateEmail(value: unknown, errors: ValidationFieldError[], field = '
   return typeof email === 'string' ? email : '';
 }
 
-function validateUsername(value: unknown, errors: ValidationFieldError[], field = 'username'): string {
+export function validateUsername(value: unknown, errors: ValidationFieldError[], field = 'username'): string {
   const username = normalizeUsername(value);
   if (typeof username !== 'string' || !username.length) {
     addError(errors, field, 'Username is required');
@@ -51,7 +51,7 @@ function validateUsername(value: unknown, errors: ValidationFieldError[], field 
   return typeof username === 'string' ? username : '';
 }
 
-function validatePassword(
+export function validatePassword(
   value: unknown,
   errors: ValidationFieldError[],
   field = 'password',
