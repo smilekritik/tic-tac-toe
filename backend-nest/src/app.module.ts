@@ -22,6 +22,7 @@ import { MeModule } from './me/me.module';
 import { UsersModule } from './users/users.module';
 import { MatchesModule } from './matches/matches.module';
 import { LeaderboardModule } from './leaderboard/leaderboard.module';
+import { GameModule } from './game/game.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { LeaderboardModule } from './leaderboard/leaderboard.module';
     UsersModule,
     MatchesModule,
     LeaderboardModule,
+    GameModule,
   ],
   controllers: [HealthController],
   providers: [
